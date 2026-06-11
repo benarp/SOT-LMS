@@ -159,7 +159,7 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
   })
 
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const fromEmail = 'barp@allpeopleschurch.org'
+  const fromEmail = 'onboarding@resend.dev' // TODO: swap back to barp@allpeopleschurch.org after domain verification
   const subject = `Week ${week.week_number} — ${week.title} | School of Transformation`
 
   const emails = students
@@ -228,7 +228,7 @@ export async function sendTestEmail(): Promise<{ weekTitle?: string; error?: str
 
   try {
     await resend.emails.send({
-      from: 'barp@allpeopleschurch.org',
+      from: 'onboarding@resend.dev', // TODO: swap back to barp@allpeopleschurch.org after domain verification
       replyTo: 'barp@allpeopleschurch.org',
       to: toEmail,
       subject: `[TEST] Week ${week.week_number} — ${week.title} | School of Transformation`,

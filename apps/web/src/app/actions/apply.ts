@@ -7,6 +7,8 @@ import { Resend } from 'resend'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
 const ADMIN_EMAIL = 'barp@allpeopleschurch.org'
+// TODO: swap FROM_EMAIL back to ADMIN_EMAIL after allpeopleschurch.org domain is verified in Resend
+const FROM_EMAIL = 'onboarding@resend.dev'
 
 // ─── Applicant: initialize account after signup ───────────────────────────────
 
@@ -195,7 +197,7 @@ export async function savePastorInfo(formData: FormData): Promise<{ error?: stri
 
     // Email to pastor
     await resend.emails.send({
-      from: ADMIN_EMAIL,
+      from: FROM_EMAIL,
       replyTo: ADMIN_EMAIL,
       to: pastorEmail,
       subject: `Reference request for ${app.full_name} — School of Transformation`,
@@ -204,7 +206,7 @@ export async function savePastorInfo(formData: FormData): Promise<{ error?: stri
 
     // Admin notification
     await resend.emails.send({
-      from: ADMIN_EMAIL,
+      from: FROM_EMAIL,
       replyTo: ADMIN_EMAIL,
       to: ADMIN_EMAIL,
       subject: `New application — ${app.full_name}`,
@@ -245,7 +247,7 @@ export async function submitPastoralReference(
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
-      from: ADMIN_EMAIL,
+      from: FROM_EMAIL,
       to: ref.pastor_email!,
       subject: 'Reference received — School of Transformation',
       html: `<p>Hi ${ref.pastor_name},</p><p>Thank you — we've received your reference. We appreciate you taking the time.</p><p>— School of Transformation</p>`,
@@ -292,7 +294,7 @@ export async function approveApplication(applicationId: string, notes?: string):
     const { data: applicantProfile } = await admin.from('profiles').select('email').eq('id', app.applicant_id).single()
     if (applicantProfile?.email) {
       await resend.emails.send({
-        from: ADMIN_EMAIL,
+        from: FROM_EMAIL,
         replyTo: ADMIN_EMAIL,
         to: applicantProfile.email,
         subject: 'You\'ve been accepted — School of Transformation',
@@ -338,7 +340,7 @@ export async function denyApplication(applicationId: string, notes?: string): Pr
     const { data: applicantProfile } = await admin.from('profiles').select('email').eq('id', app.applicant_id).single()
     if (applicantProfile?.email) {
       await resend.emails.send({
-        from: ADMIN_EMAIL,
+        from: FROM_EMAIL,
         replyTo: ADMIN_EMAIL,
         to: applicantProfile.email,
         subject: 'Your application — School of Transformation',
