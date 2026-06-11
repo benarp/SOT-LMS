@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { generateImpersonationLink } from '@/app/actions/impersonate'
+import { startImpersonation } from '@/app/actions/impersonate'
 
 export default function ImpersonateButton({ email, name }: { email: string; name: string }) {
   const [isPending, startTransition] = useTransition()
@@ -12,14 +12,14 @@ export default function ImpersonateButton({ email, name }: { email: string; name
     if (!confirm(`View the site as ${name}? You'll be returned to the admin panel when you exit.`)) return
     setError('')
     startTransition(async () => {
-      const result = await generateImpersonationLink(email, name)
-      if (result.error || !result.link) {
-        setError(result.error || 'Failed to generate link.')
+      const result = await startImpersonation(email, name)
+      if (result.error) {
+        setError(result.error)
         return
       }
-      // Same tab — signing in as the student replaces the session
-      // browser-wide, so a second tab would be misleading.
-      window.location.href = result.link
+      // Full reload — the action swapped the session cookies to the student,
+      // which applies browser-wide, so a second tab would be misleading.
+      window.location.href = '/dashboard'
     })
   }
 

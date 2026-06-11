@@ -25,10 +25,10 @@ export type ImpersonationState = {
   startedAt: string
 }
 
-export async function generateImpersonationLink(
+export async function startImpersonation(
   studentEmail: string,
   studentName: string
-): Promise<{ link?: string; error?: string }> {
+): Promise<{ error?: string }> {
   let admin
   try {
     admin = await requireAdmin()
@@ -45,11 +45,17 @@ export async function generateImpersonationLink(
   const { data, error } = await adminClient.auth.admin.generateLink({
     type: 'magiclink',
     email: studentEmail,
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}/auth/callback`,
-    },
   })
   if (error) return { error: error.message }
+
+  // Verify the token server-side and write the student's session cookies
+  // directly — no redirect through Supabase's verify endpoint, which
+  // returns the session in a URL fragment the server callback can't read.
+  const { error: verifyError } = await admin.supabase.auth.verifyOtp({
+    type: 'magiclink',
+    token_hash: data.properties.hashed_token,
+  })
+  if (verifyError) return { error: verifyError.message }
 
   const cookieStore = await cookies()
   const state: ImpersonationState = {
@@ -76,7 +82,7 @@ export async function generateImpersonationLink(
     target_id: studentEmail,
   })
 
-  return { link: data.properties.action_link }
+  return {}
 }
 
 export async function getImpersonationState(): Promise<ImpersonationState | null> {
