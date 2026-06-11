@@ -186,6 +186,7 @@ A React Native app (Expo) providing the student experience natively on iOS and A
 
 | Item | Notes |
 |---|---|
+| **Stripe billing** | Full spec in [`docs/billing-spec.md`](./billing-spec.md). $400 deposit + $200/month × 10 months. Includes pause, resume, credits, cancellation, refunds, and financial reporting. Required before first paid cohort. |
 | Email (Resend) | Code is complete. Needs Resend account, domain verification for `allpeopleschurch.org`, and `RESEND_API_KEY` added to Vercel env vars |
 | Mobile app store submission | Expo build configured; pending Apple Developer account and Xcode setup |
 | CSV student import | Admin students page has UI placeholder; bulk import not yet implemented |
