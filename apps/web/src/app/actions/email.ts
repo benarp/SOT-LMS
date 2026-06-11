@@ -89,10 +89,14 @@ function buildEmailHtml({
       </div>
     </div>
 
-    <!-- Footer -->
-    <div style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 36px;">
-      <p style="font-size:12px;color:#9ca3af;margin:0;">
-        Log in to <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}" style="color:#6b7280;">the portal</a> to mark items complete.
+    <!-- Footer CTA -->
+    <div style="padding:28px 36px;text-align:center;border-top:1px solid #f3f4f6;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}"
+         style="display:inline-block;background:#111827;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:10px;">
+        Log in to mark items complete →
+      </a>
+      <p style="font-size:11px;color:#9ca3af;margin:16px 0 0 0;">
+        School of Transformation · All Peoples Church
       </p>
     </div>
 
