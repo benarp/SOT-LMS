@@ -1,0 +1,242 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import ImpersonateButton from '@/components/admin/ImpersonateButton'
+
+export type UserRow = {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  phone: string | null
+  city: string | null
+  role: string
+  paymentStatus: string | null
+  homeworkStatus: 'current' | 'late' | null
+}
+
+type SortKey = keyof Omit<UserRow, 'id'>
+type SortDir = 'asc' | 'desc'
+
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  student: 'Student',
+  group_leader: 'Group Leader',
+  applicant: 'Applicant',
+}
+
+const roleOrder: Record<string, number> = {
+  admin: 0,
+  group_leader: 1,
+  student: 2,
+  applicant: 3,
+}
+
+function sortValue(row: UserRow, key: SortKey): string | number {
+  switch (key) {
+    case 'role': return roleOrder[row.role] ?? 99
+    case 'homeworkStatus': {
+      const order = { current: 0, late: 1 }
+      return row.homeworkStatus ? order[row.homeworkStatus] : 2
+    }
+    case 'paymentStatus': return row.paymentStatus ?? 'zzz'
+    default: return (row[key] ?? '').toString().toLowerCase()
+  }
+}
+
+function downloadCSV(rows: UserRow[]) {
+  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'City', 'Role', 'Payment Status', 'Homework Status']
+  const lines = [
+    headers.join(','),
+    ...rows.map(r => [
+      r.firstName,
+      r.lastName,
+      r.email,
+      r.phone ?? '',
+      r.city ?? '',
+      roleLabels[r.role] ?? r.role,
+      r.paymentStatus ?? '—',
+      r.homeworkStatus ? (r.homeworkStatus === 'current' ? 'Current' : 'Late') : '—',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+  ]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'sot-users.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const columns: { key: SortKey; label: string; minWidth?: string }[] = [
+  { key: 'firstName', label: 'First Name' },
+  { key: 'lastName', label: 'Last Name' },
+  { key: 'email', label: 'Email', minWidth: '180px' },
+  { key: 'phone', label: 'Phone' },
+  { key: 'city', label: 'City' },
+  { key: 'paymentStatus', label: 'Payment' },
+  { key: 'homeworkStatus', label: 'Homework' },
+  { key: 'role', label: 'Role' },
+]
+
+export default function UsersTable({ users }: { users: UserRow[] }) {
+  const [sortKey, setSortKey] = useState<SortKey>('lastName')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [filterRole, setFilterRole] = useState<string>('all')
+  const [search, setSearch] = useState('')
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const filtered = useMemo(() => {
+    let rows = users
+    if (filterRole !== 'all') rows = rows.filter(r => r.role === filterRole)
+    if (search) {
+      const q = search.toLowerCase()
+      rows = rows.filter(r =>
+        r.firstName.toLowerCase().includes(q) ||
+        r.lastName.toLowerCase().includes(q) ||
+        r.email.toLowerCase().includes(q)
+      )
+    }
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a, sortKey)
+      const bv = sortValue(b, sortKey)
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }, [users, filterRole, search, sortKey, sortDir])
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return <span className="ml-1 text-gray-300">↕</span>
+    return <span className="ml-1 text-gray-600">{sortDir === 'asc' ? '↑' : '↓'}</span>
+  }
+
+  function HomeworkBadge({ status }: { status: 'current' | 'late' | null }) {
+    if (!status) return <span className="text-gray-300">—</span>
+    if (status === 'current') return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">Current</span>
+    )
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">Late</span>
+    )
+  }
+
+  function PaymentBadge({ status }: { status: string | null }) {
+    if (!status) return <span className="text-gray-300">—</span>
+    const colors: Record<string, string> = {
+      Current: 'bg-green-50 text-green-700',
+      Paused: 'bg-yellow-50 text-yellow-700',
+      Overdue: 'bg-red-50 text-red-700',
+    }
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] ?? 'bg-gray-100 text-gray-600'}`}>
+        {status}
+      </span>
+    )
+  }
+
+  function RoleBadge({ role }: { role: string }) {
+    const colors: Record<string, string> = {
+      admin: 'bg-purple-50 text-purple-700',
+      group_leader: 'bg-blue-50 text-blue-700',
+      student: 'bg-gray-100 text-gray-700',
+      applicant: 'bg-orange-50 text-orange-700',
+    }
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors[role] ?? 'bg-gray-100 text-gray-600'}`}>
+        {roleLabels[role] ?? role}
+      </span>
+    )
+  }
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <input
+          type="search"
+          placeholder="Search name or email…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-1 focus:ring-gray-300"
+        />
+        <select
+          value={filterRole}
+          onChange={e => setFilterRole(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
+        >
+          <option value="all">All roles</option>
+          <option value="admin">Admin</option>
+          <option value="group_leader">Group Leader</option>
+          <option value="student">Student</option>
+          <option value="applicant">Applicant</option>
+        </select>
+        <span className="text-sm text-gray-400 ml-auto">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</span>
+        <button
+          onClick={() => downloadCSV(filtered)}
+          className="flex items-center gap-1.5 text-sm border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+          </svg>
+          Export CSV
+        </button>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50">
+              {columns.map(col => (
+                <th
+                  key={col.key}
+                  onClick={() => handleSort(col.key)}
+                  className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-800 select-none whitespace-nowrap"
+                  style={col.minWidth ? { minWidth: col.minWidth } : undefined}
+                >
+                  {col.label}
+                  <SortIcon col={col.key} />
+                </th>
+              ))}
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {filtered.map(user => (
+              <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-4 py-3 text-gray-900">{user.firstName || '—'}</td>
+                <td className="px-4 py-3 text-gray-900 font-medium">{user.lastName || '—'}</td>
+                <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                <td className="px-4 py-3 text-gray-500">{user.phone ?? <span className="text-gray-300">—</span>}</td>
+                <td className="px-4 py-3 text-gray-500">{user.city ?? <span className="text-gray-300">—</span>}</td>
+                <td className="px-4 py-3"><PaymentBadge status={user.paymentStatus} /></td>
+                <td className="px-4 py-3"><HomeworkBadge status={user.homeworkStatus} /></td>
+                <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
+                <td className="px-4 py-3">
+                  <ImpersonateButton email={user.email} name={`${user.firstName} ${user.lastName}`.trim() || user.email} />
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">
+                  No users found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
