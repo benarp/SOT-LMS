@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -116,6 +117,7 @@ export async function deleteAnnouncement(id: string) {
 // ── Students ────────────────────────────────────────────────
 
 export async function inviteStudent(formData: FormData) {
+  await requireAdmin()
   const adminClient = getAdminClient()
   const email = formData.get('email') as string
   const fullName = formData.get('fullName') as string

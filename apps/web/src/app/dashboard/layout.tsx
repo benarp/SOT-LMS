@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Suspense } from 'react'
 import ImpersonationBanner from '@/components/ImpersonationBanner'
+import { getImpersonationState } from '@/app/actions/impersonate'
 import NavShell from '@/components/NavShell'
 import Link from 'next/link'
 
@@ -9,6 +9,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const impersonation = await getImpersonationState()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -57,9 +59,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       userName={profile?.full_name || user.email || ''}
       userRole={profile?.role || 'student'}
     >
-      <Suspense fallback={null}>
-        <ImpersonationBanner studentName={profile?.full_name || user.email || 'student'} />
-      </Suspense>
+      {impersonation && (
+        <ImpersonationBanner studentName={impersonation.studentName || profile?.full_name || user.email || 'student'} />
+      )}
       <div className="p-4 md:p-8">
         {children}
       </div>

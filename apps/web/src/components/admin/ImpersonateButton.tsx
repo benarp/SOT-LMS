@@ -7,16 +7,19 @@ export default function ImpersonateButton({ email, name }: { email: string; name
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
 
-  function handleImpersonate() {
-    if (!confirm(`Open a new tab signed in as ${name}?`)) return
+  function handleImpersonate(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm(`View the site as ${name}? You'll be returned to the admin panel when you exit.`)) return
     setError('')
     startTransition(async () => {
-      try {
-        const link = await generateImpersonationLink(email)
-        window.open(link, '_blank')
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to generate link.')
+      const result = await generateImpersonationLink(email, name)
+      if (result.error || !result.link) {
+        setError(result.error || 'Failed to generate link.')
+        return
       }
+      // Same tab — signing in as the student replaces the session
+      // browser-wide, so a second tab would be misleading.
+      window.location.href = result.link
     })
   }
 
