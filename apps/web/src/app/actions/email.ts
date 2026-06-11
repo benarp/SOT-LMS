@@ -1,7 +1,17 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Bible reading',
@@ -22,11 +32,13 @@ function buildEmailHtml({
   items,
   announcements,
   schoolYear,
+  unsubscribeUrl,
 }: {
   week: { week_number: number; title: string; due_date: string }
   items: { type: string; title: string; description?: string | null; external_url?: string | null }[]
   announcements: { title: string; body: string }[]
   schoolYear: { name: string }
+  unsubscribeUrl?: string
 }) {
   const dueDate = new Date(week.due_date).toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
@@ -38,8 +50,8 @@ function buildEmailHtml({
         <h2 style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b7280;margin:0 0 12px 0;">Announcements</h2>
         ${announcements.map(a => `
           <div style="background:#eff6ff;border-left:3px solid #3b82f6;padding:14px 16px;margin-bottom:10px;border-radius:0 8px 8px 0;">
-            <p style="font-weight:600;color:#1e40af;margin:0 0 4px 0;font-size:14px;">${a.title}</p>
-            <p style="color:#1d4ed8;margin:0;font-size:14px;line-height:1.5;">${a.body}</p>
+            <p style="font-weight:600;color:#1e40af;margin:0 0 4px 0;font-size:14px;">${escapeHtml(a.title)}</p>
+            <p style="color:#1d4ed8;margin:0;font-size:14px;line-height:1.5;">${escapeHtml(a.body)}</p>
           </div>
         `).join('')}
       </div>
@@ -50,10 +62,10 @@ function buildEmailHtml({
     <div style="padding:14px 0;border-bottom:1px solid #f3f4f6;display:flex;align-items:flex-start;gap:12px;">
       <span style="font-size:18px;flex-shrink:0;margin-top:1px;">${typeIcons[item.type] || '•'}</span>
       <div>
-        <p style="font-size:11px;color:#9ca3af;margin:0 0 2px 0;text-transform:uppercase;letter-spacing:0.06em;">${typeLabels[item.type] || item.type}</p>
-        <p style="font-size:14px;font-weight:500;color:#111827;margin:0;">${item.title}</p>
-        ${item.description ? `<p style="font-size:13px;color:#6b7280;margin:3px 0 0 0;">${item.description}</p>` : ''}
-        ${item.external_url ? `<a href="${item.external_url}" style="font-size:13px;color:#3b82f6;margin:4px 0 0 0;display:inline-block;">Watch / read →</a>` : ''}
+        <p style="font-size:11px;color:#9ca3af;margin:0 0 2px 0;text-transform:uppercase;letter-spacing:0.06em;">${typeLabels[item.type] || escapeHtml(item.type)}</p>
+        <p style="font-size:14px;font-weight:500;color:#111827;margin:0;">${escapeHtml(item.title)}</p>
+        ${item.description ? `<p style="font-size:13px;color:#6b7280;margin:3px 0 0 0;">${escapeHtml(item.description)}</p>` : ''}
+        ${item.external_url ? `<a href="${escapeHtml(item.external_url)}" style="font-size:13px;color:#3b82f6;margin:4px 0 0 0;display:inline-block;">Watch / read →</a>` : ''}
       </div>
     </div>
   `).join('')
@@ -67,14 +79,14 @@ function buildEmailHtml({
 
     <!-- Header -->
     <div style="background:#111827;padding:28px 36px;">
-      <p style="color:#9ca3af;font-size:12px;margin:0 0 4px 0;letter-spacing:0.08em;text-transform:uppercase;">${schoolYear.name}</p>
+      <p style="color:#9ca3af;font-size:12px;margin:0 0 4px 0;letter-spacing:0.08em;text-transform:uppercase;">${escapeHtml(schoolYear.name)}</p>
       <h1 style="color:#ffffff;font-size:20px;font-weight:600;margin:0;">School of Transformation</h1>
     </div>
 
     <!-- Week label -->
     <div style="background:#f9fafb;border-bottom:1px solid #f3f4f6;padding:16px 36px;">
       <p style="font-size:12px;color:#9ca3af;margin:0 0 2px 0;text-transform:uppercase;letter-spacing:0.08em;">Week ${week.week_number}</p>
-      <h2 style="font-size:22px;font-weight:600;color:#111827;margin:0 0 4px 0;">${week.title}</h2>
+      <h2 style="font-size:22px;font-weight:600;color:#111827;margin:0 0 4px 0;">${escapeHtml(week.title)}</h2>
       <p style="font-size:13px;color:#6b7280;margin:0;">Due ${dueDate}</p>
     </div>
 
@@ -98,6 +110,10 @@ function buildEmailHtml({
       <p style="font-size:11px;color:#9ca3af;margin:16px 0 0 0;">
         School of Transformation · All Peoples Church
       </p>
+      ${unsubscribeUrl ? `
+      <p style="font-size:11px;color:#9ca3af;margin:8px 0 0 0;">
+        <a href="${escapeHtml(unsubscribeUrl)}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a>
+      </p>` : ''}
     </div>
 
   </div>
@@ -134,7 +150,7 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
 
   if (!week) return { sent: 0, error: 'No upcoming week found. Add a future week in Curriculum first.' }
 
-  const [{ data: items }, { data: announcements }, { data: students }] = await Promise.all([
+  const [{ data: items }, { data: announcements }, studentsResult] = await Promise.all([
     supabase
       .from('homework_items')
       .select('id, type, title, description, external_url')
@@ -149,19 +165,22 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
       .limit(5),
     supabase
       .from('profiles')
-      .select('email, full_name')
-      .eq('role', 'student'),
+      .select('email, full_name, email_opt_out, unsubscribe_token')
+      .eq('role', 'student')
+      .eq('email_opt_out', false),
   ])
+
+  // Fall back to the pre-migration column set if unsubscribe columns don't exist yet
+  let students: { email: string | null; full_name: string | null; unsubscribe_token?: string }[] | null =
+    studentsResult.data
+  if (studentsResult.error) {
+    const fallback = await supabase.from('profiles').select('email, full_name').eq('role', 'student')
+    students = fallback.data
+  }
 
   if (!students || students.length === 0) return { sent: 0, error: 'No students found' }
 
-  const html = buildEmailHtml({
-    week,
-    items: items || [],
-    announcements: announcements || [],
-    schoolYear,
-  })
-
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
   const resend = new Resend(process.env.RESEND_API_KEY)
   const fromEmail = 'onboarding@resend.dev' // TODO: swap back to barp@allpeopleschurch.org after domain verification
   const subject = `Week ${week.week_number} — ${week.title} | School of Transformation`
@@ -173,7 +192,13 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
       replyTo: 'barp@allpeopleschurch.org',
       to: s.email!,
       subject,
-      html,
+      html: buildEmailHtml({
+        week,
+        items: items || [],
+        announcements: announcements || [],
+        schoolYear,
+        unsubscribeUrl: s.unsubscribe_token ? `${siteUrl}/unsubscribe/${s.unsubscribe_token}` : undefined,
+      }),
     }))
 
   try {
@@ -185,6 +210,18 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
     for (const chunk of chunks) {
       const result = await resend.batch.send(chunk)
       if (result.data) sent += result.data.length
+    }
+
+    // Best-effort send log — powers the "last sent" indicator
+    try {
+      await createAdminClient().from('email_log').insert({
+        type: 'weekly',
+        week_id: week.id,
+        sent_by: user.id,
+        recipient_count: sent,
+      })
+    } catch (err) {
+      console.error('email_log insert failed:', err)
     }
 
     return { sent, weekTitle: week.title }

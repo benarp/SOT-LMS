@@ -3,12 +3,25 @@
 import { useState } from 'react'
 import { sendWeeklyEmail } from '@/app/actions/email'
 
-export default function SendWeeklyEmailButton() {
+export default function SendWeeklyEmailButton({
+  lastSentAt,
+  lastRecipientCount,
+}: {
+  lastSentAt?: string | null
+  lastRecipientCount?: number | null
+}) {
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [result, setResult] = useState<{ sent?: number; weekTitle?: string; error?: string }>({})
 
+  const recentlySent =
+    !!lastSentAt && Date.now() - new Date(lastSentAt).getTime() < 5 * 24 * 60 * 60 * 1000
+
   async function handleSend() {
     if (state === 'sending') return
+    const warning = recentlySent
+      ? `The weekly email already went out ${new Date(lastSentAt!).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}${lastRecipientCount ? ` to ${lastRecipientCount} students` : ''}. Send it again to everyone?`
+      : 'Send the weekly email to all enrolled students?'
+    if (!confirm(warning)) return
     setState('sending')
     const r = await sendWeeklyEmail()
     setResult(r)
@@ -49,6 +62,13 @@ export default function SendWeeklyEmailButton() {
       {state === 'error' && (
         <p className="mt-2 text-sm text-red-500">
           {result.error}
+        </p>
+      )}
+
+      {state === 'idle' && lastSentAt && (
+        <p className="mt-2 text-xs text-gray-400">
+          Last sent {new Date(lastSentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          {lastRecipientCount ? ` · ${lastRecipientCount} recipients` : ''}
         </p>
       )}
     </div>

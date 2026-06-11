@@ -12,16 +12,25 @@ export default async function AnnouncementsPage() {
     supabase.from('school_years').select('id').eq('is_active', true).single(),
   ])
 
-  const { data: nextWeek } = schoolYear
-    ? await supabase
-        .from('weeks')
-        .select('week_number, title, due_date')
-        .eq('school_year_id', schoolYear.id)
-        .gte('due_date', new Date().toISOString())
-        .order('due_date', { ascending: true })
-        .limit(1)
-        .single()
-    : { data: null }
+  const [{ data: nextWeek }, { data: lastSend }] = await Promise.all([
+    schoolYear
+      ? supabase
+          .from('weeks')
+          .select('week_number, title, due_date')
+          .eq('school_year_id', schoolYear.id)
+          .gte('due_date', new Date().toISOString())
+          .order('due_date', { ascending: true })
+          .limit(1)
+          .single()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from('email_log')
+      .select('created_at, recipient_count')
+      .eq('type', 'weekly')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
 
   return (
     <div className="max-w-2xl">
@@ -47,7 +56,10 @@ export default async function AnnouncementsPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <SendTestEmailButton />
-            <SendWeeklyEmailButton />
+            <SendWeeklyEmailButton
+              lastSentAt={lastSend?.created_at ?? null}
+              lastRecipientCount={lastSend?.recipient_count ?? null}
+            />
           </div>
         </div>
       </div>
