@@ -31,9 +31,10 @@ function HistoryIcon({ color }: { color: ColorValue }) {
 export default function TabsLayout() {
   const openCount = useOpenCount()
 
-  // Populate the badge on app start, before the Open tab is ever visited
+  // Populate the badge on app start, before the Open tab is ever visited.
+  // Best-effort: a failed fetch just means no badge until the next load.
   useEffect(() => {
-    fetchOpenAssignments()
+    fetchOpenAssignments().catch(() => {})
   }, [])
 
   return (

@@ -53,7 +53,10 @@ export function useOpenCount(): number {
  * Also refreshes the tab badge count.
  */
 export async function fetchOpenAssignments(): Promise<{ weeks: OpenWeek[]; userId: string } | null> {
-  const { data: { user } } = await supabase.auth.getUser()
+  // getSession reads locally — no auth-server round-trip, so this can't
+  // race the home screen's requests right after login
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
   if (!user) return null
 
   const { data: schoolYear } = await supabase
