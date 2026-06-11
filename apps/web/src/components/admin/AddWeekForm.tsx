@@ -13,13 +13,13 @@ export default function AddWeekForm({ schoolYearId, nextWeekNumber }: { schoolYe
     setError('')
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await addWeek(formData)
-        setOpen(false)
-        ;(e.target as HTMLFormElement).reset()
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const result = await addWeek(formData)
+      if (result?.error) {
+        setError(result.error)
+        return
       }
+      setOpen(false)
+      ;(e.target as HTMLFormElement).reset()
     })
   }
 

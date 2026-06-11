@@ -16,7 +16,7 @@ function getAdminClient() {
 
 // ── Curriculum ──────────────────────────────────────────────
 
-export async function addWeek(formData: FormData) {
+export async function addWeek(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const schoolYearId = formData.get('schoolYearId') as string
   const weekNumber = parseInt(formData.get('weekNumber') as string)
@@ -30,11 +30,12 @@ export async function addWeek(formData: FormData) {
     due_date: new Date(dueDate).toISOString(),
   })
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/admin/curriculum')
+  return {}
 }
 
-export async function addHomeworkItem(formData: FormData) {
+export async function addHomeworkItem(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const weekId = formData.get('weekId') as string
   const type = formData.get('type') as string
@@ -56,11 +57,12 @@ export async function addHomeworkItem(formData: FormData) {
     sort_order: sortOrder,
   })
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath(`/admin/curriculum/${weekId}`)
+  return {}
 }
 
-export async function updateHomeworkItem(formData: FormData) {
+export async function updateHomeworkItem(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const itemId = formData.get('itemId') as string
   const weekId = formData.get('weekId') as string
@@ -76,23 +78,36 @@ export async function updateHomeworkItem(formData: FormData) {
     content: content || null,
   }).eq('id', itemId)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath(`/admin/curriculum/${weekId}`)
+  return {}
 }
 
-export async function deleteHomeworkItem(itemId: string, weekId: string) {
+export async function deleteHomeworkItem(itemId: string, weekId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+
+  // Completion records cascade with the item — block the delete once students
+  // have marked it done so a school year of data can't vanish on a misclick.
+  const { count } = await supabase
+    .from('submissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('homework_item_id', itemId)
+  if (count && count > 0) {
+    return { error: `${count} student${count === 1 ? ' has' : 's have'} completed this item. Deleting it would erase their records — edit the item instead.` }
+  }
+
   const { error } = await supabase.from('homework_items').delete().eq('id', itemId)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath(`/admin/curriculum/${weekId}`)
+  return {}
 }
 
 // ── Announcements ───────────────────────────────────────────
 
-export async function createAnnouncement(formData: FormData) {
+export async function createAnnouncement(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!user) return { error: 'Not authenticated' }
 
   const title = formData.get('title') as string
   const body = formData.get('body') as string
@@ -104,21 +119,25 @@ export async function createAnnouncement(formData: FormData) {
     publish_at: new Date().toISOString(),
   })
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/admin/announcements')
+  return {}
 }
 
-export async function deleteAnnouncement(id: string) {
+export async function deleteAnnouncement(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { error } = await supabase.from('announcements').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/admin/announcements')
+  return {}
 }
 
 // ── Students ────────────────────────────────────────────────
 
-export async function inviteStudent(formData: FormData) {
-  await requireAdmin()
+export async function inviteStudent(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
+
   const adminClient = getAdminClient()
   const email = formData.get('email') as string
   const fullName = formData.get('fullName') as string
@@ -128,7 +147,7 @@ export async function inviteStudent(formData: FormData) {
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}/auth/callback`,
   })
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
 
   if (data?.user) {
     await adminClient.from('profiles')
@@ -136,16 +155,26 @@ export async function inviteStudent(formData: FormData) {
       .eq('id', data.user.id)
   }
 
+  await logAudit({
+    actor_id: ctx.user.id,
+    actor_email: ctx.profile.email,
+    action: 'student_invited',
+    target_type: 'user',
+    target_id: email,
+  })
+
   revalidatePath('/admin/students')
+  return {}
 }
 
-export async function updateStudentGroup(studentId: string, groupId: string | null) {
+export async function updateStudentGroup(studentId: string, groupId: string | null): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { error } = await supabase.from('profiles')
     .update({ group_id: groupId || null })
     .eq('id', studentId)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/admin/students')
+  return {}
 }
 
 // ── User management ─────────────────────────────────────────
@@ -280,12 +309,13 @@ export async function sendPasswordSetupEmail(userId: string): Promise<{ error?: 
   return {}
 }
 
-export async function addGroup(formData: FormData) {
+export async function addGroup(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const name = formData.get('name') as string
   const schoolYearId = formData.get('schoolYearId') as string
 
   const { error } = await supabase.from('groups').insert({ name, school_year_id: schoolYearId })
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/admin/students')
+  return {}
 }

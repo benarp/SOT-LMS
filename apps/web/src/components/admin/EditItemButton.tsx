@@ -25,12 +25,12 @@ export default function EditItemButton({ item }: { item: Item }) {
     setError('')
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await updateHomeworkItem(formData)
-        setOpen(false)
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const result = await updateHomeworkItem(formData)
+      if (result?.error) {
+        setError(result.error)
+        return
       }
+      setOpen(false)
     })
   }
 

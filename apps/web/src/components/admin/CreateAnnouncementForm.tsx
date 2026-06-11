@@ -14,13 +14,13 @@ export default function CreateAnnouncementForm() {
     setSuccess('')
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await createAnnouncement(formData)
-        setSuccess('Announcement published.')
-        ;(e.target as HTMLFormElement).reset()
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const result = await createAnnouncement(formData)
+      if (result?.error) {
+        setError(result.error)
+        return
       }
+      setSuccess('Announcement published.')
+      ;(e.target as HTMLFormElement).reset()
     })
   }
 

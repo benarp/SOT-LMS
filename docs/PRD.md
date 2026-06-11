@@ -67,6 +67,8 @@ From the Announcements page, the admin can:
 
 The email includes the next upcoming week's title, due date, all homework items, and any active announcements. Sent via Resend. *Requires Resend account setup and domain verification for `allpeopleschurch.org`.*
 
+Safeguards: each send is recorded in `email_log` (a "last sent" date shows next to the button, with a warning before re-sending within 5 days); every email carries a per-student unsubscribe link backed by `profiles.unsubscribe_token`, and opted-out students are skipped.
+
 ### 3.4 Application Process
 
 A public, multi-step application flow at `/apply`.
@@ -105,10 +107,15 @@ A public, multi-step application flow at `/apply`.
 - Video and Bible reading items support a `content` field (embed URL or day-by-day reading list)
 
 #### Students
-- View all enrolled students
+- View all users (sortable/filterable table, CSV export); rows click through to a detail page
+- Per-user detail page: edit name/email, change role, assign group, deactivate/reactivate (sign-in blocked, data kept), send password setup/reset email
 - Assign students to small groups
 - Invite new students by email
-- Log in as any student (impersonation) for support
+- View as any student (impersonation) for support — persistent banner while active, exit returns to the admin session, start/end recorded in the audit log
+
+#### Auth & accountability
+- Forgot-password flow (self-service reset via email)
+- `audit_log` table records admin actions: impersonation, role changes, deactivation, invites, profile edits
 
 #### Reports
 - Completion rates by week, student, and group

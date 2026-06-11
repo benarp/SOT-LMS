@@ -16,14 +16,14 @@ export default function AddHomeworkItemForm({ weekId, books, nextSortOrder }: { 
     setError('')
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await addHomeworkItem(formData)
-        setOpen(false)
-        setType('bible_reading')
-        ;(e.target as HTMLFormElement).reset()
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const result = await addHomeworkItem(formData)
+      if (result?.error) {
+        setError(result.error)
+        return
       }
+      setOpen(false)
+      setType('bible_reading')
+      ;(e.target as HTMLFormElement).reset()
     })
   }
 

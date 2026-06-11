@@ -1,16 +1,25 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { updateStudentGroup } from '@/app/actions/admin'
 
 type Group = { id: string; name: string }
 
 export default function GroupAssignSelect({ studentId, currentGroupId, groups }: { studentId: string, currentGroupId: string | null, groups: Group[] }) {
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState('')
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const groupId = e.target.value || null
-    startTransition(() => updateStudentGroup(studentId, groupId))
+    setError('')
+    startTransition(async () => {
+      const result = await updateStudentGroup(studentId, groupId)
+      if (result?.error) setError(result.error)
+    })
+  }
+
+  if (error) {
+    return <p className="text-xs text-red-500 max-w-[160px]">{error}</p>
   }
 
   return (

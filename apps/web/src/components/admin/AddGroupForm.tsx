@@ -13,13 +13,13 @@ export default function AddGroupForm({ schoolYearId }: { schoolYearId: string })
     setError('')
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await addGroup(formData)
-        setOpen(false)
-        ;(e.target as HTMLFormElement).reset()
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const result = await addGroup(formData)
+      if (result?.error) {
+        setError(result.error)
+        return
       }
+      setOpen(false)
+      ;(e.target as HTMLFormElement).reset()
     })
   }
 

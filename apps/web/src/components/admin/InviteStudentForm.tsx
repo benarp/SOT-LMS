@@ -15,13 +15,13 @@ export default function InviteStudentForm() {
     setSuccess('')
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await inviteStudent(formData)
-        setSuccess(`Invite sent to ${formData.get('email')}`)
-        ;(e.target as HTMLFormElement).reset()
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const result = await inviteStudent(formData)
+      if (result?.error) {
+        setError(result.error)
+        return
       }
+      setSuccess(`Invite sent to ${formData.get('email')}`)
+      ;(e.target as HTMLFormElement).reset()
     })
   }
 
