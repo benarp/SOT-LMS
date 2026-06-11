@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import ImpersonateButton from '@/components/admin/ImpersonateButton'
 
 export type UserRow = {
@@ -80,6 +81,7 @@ const columns: { key: SortKey; label: string; minWidth?: string }[] = [
 ]
 
 export default function UsersTable({ users }: { users: UserRow[] }) {
+  const router = useRouter()
   const [sortKey, setSortKey] = useState<SortKey>('lastName')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [filterRole, setFilterRole] = useState<string>('all')
@@ -213,7 +215,11 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {filtered.map(user => (
-              <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+              <tr
+                key={user.id}
+                onClick={() => router.push(`/admin/students/${user.id}`)}
+                className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+              >
                 <td className="px-4 py-3 text-gray-900">{user.firstName || '—'}</td>
                 <td className="px-4 py-3 text-gray-900 font-medium">{user.lastName || '—'}</td>
                 <td className="px-4 py-3 text-gray-600">{user.email}</td>
@@ -222,7 +228,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
                 <td className="px-4 py-3"><PaymentBadge status={user.paymentStatus} /></td>
                 <td className="px-4 py-3"><HomeworkBadge status={user.homeworkStatus} /></td>
                 <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   <ImpersonateButton email={user.email} name={`${user.firstName} ${user.lastName}`.trim() || user.email} />
                 </td>
               </tr>
