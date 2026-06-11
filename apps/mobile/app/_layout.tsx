@@ -36,6 +36,7 @@ export default function RootLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="week/[weekId]" options={{ headerShown: true, headerTitle: '', headerBackTitle: 'Back', headerTintColor: '#111827' }} />
       <Stack.Screen name="item/[itemId]" options={{ headerShown: true, headerTitle: '', headerBackTitle: 'Back', headerTintColor: '#111827' }} />
+      <Stack.Screen name="account" options={{ headerShown: true, headerTitle: '', headerBackTitle: 'Back', headerTintColor: '#111827' }} />
     </Stack>
   )
 }

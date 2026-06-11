@@ -95,6 +95,13 @@ export default function HistoryScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.cardTop}>
+                    {allDone ? (
+                      <View style={styles.checkCircle}>
+                        <Text style={styles.checkCircleMark}>✓</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.openCircle} />
+                    )}
                     <View style={{ flex: 1 }}>
                       <Text style={styles.weekLabel}>Week {week.week_number}</Text>
                       <Text style={styles.weekTitle}>{week.title}</Text>
@@ -104,7 +111,7 @@ export default function HistoryScreen() {
                     </View>
                     <View style={styles.badge(allDone)}>
                       <Text style={styles.badgeText(allDone)}>
-                        {allDone ? 'Complete' : `${week.completedCount}/${week.totalCount}`}
+                        {allDone ? '✓ Complete' : `${week.completedCount}/${week.totalCount} done`}
                       </Text>
                     </View>
                   </View>
@@ -141,20 +148,40 @@ const styles = StyleSheet.create({
   weekTitle: { fontSize: 15, fontWeight: '600', color: '#111827', marginBottom: 3 },
   dueDate: { fontSize: 12, color: '#9ca3af' },
   badge: (done: boolean) => ({
-    backgroundColor: done ? '#f0fdf4' : '#f9fafb',
+    backgroundColor: done ? '#f0fdf4' : '#fffbeb',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: done ? '#bbf7d0' : '#e5e7eb',
+    borderColor: done ? '#bbf7d0' : '#fde68a',
     alignSelf: 'flex-start',
   }),
   badgeText: (done: boolean) => ({
     fontSize: 12,
     fontWeight: '600',
-    color: done ? '#16a34a' : '#6b7280',
+    color: done ? '#16a34a' : '#b45309',
   }),
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  checkCircleMark: { color: '#fff', fontSize: 13, fontWeight: '700', lineHeight: 15 },
+  openCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#fbbf24',
+    marginTop: 2,
+    flexShrink: 0,
+  },
   progressTrack: { height: 4, backgroundColor: '#e5e7eb', borderRadius: 99, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#111827', borderRadius: 99 },
+  progressFill: { height: '100%', backgroundColor: '#16a34a', borderRadius: 99 },
   empty: { fontSize: 14, color: '#9ca3af', textAlign: 'center', marginTop: 40 },
 } as any)

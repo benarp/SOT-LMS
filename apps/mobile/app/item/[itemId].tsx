@@ -4,9 +4,11 @@ import {
   TouchableOpacity, Alert, Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams } from 'expo-router'
 import { WebView } from 'react-native-webview'
 import { supabase } from '../../lib/supabase'
+import { adjustOpenCount } from '../../lib/openAssignments'
+import ReflectionEditor from '../../components/ReflectionEditor'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const VIDEO_HEIGHT = Math.round((SCREEN_WIDTH - 32) * 9 / 16)
@@ -48,11 +50,13 @@ function getEmbedUrl(url: string): string | null {
 
 export default function ItemDetailScreen() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>()
-  const router = useRouter()
   const [item, setItem] = useState<Item | null>(null)
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(false)
   const [userId, setUserId] = useState('')
+  const [book, setBook] = useState<{ id: string; title: string } | null>(null)
+  const [reflection, setReflection] = useState<{ id: string; content: string } | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -81,6 +85,21 @@ export default function ItemDetailScreen() {
         .eq('homework_item_id', itemId)
         .single()
 
+      // For book reflections, load the book and any existing reflection
+      // so the editor opens right here instead of a separate tab
+      if (itemData.type === 'book_reflection' && itemData.book_id) {
+        const [{ data: bookData }, { data: refData }] = await Promise.all([
+          supabase.from('books').select('id, title').eq('id', itemData.book_id).single(),
+          supabase.from('book_reflections')
+            .select('id, content')
+            .eq('student_id', user.id)
+            .eq('book_id', itemData.book_id)
+            .maybeSingle(),
+        ])
+        setBook(bookData)
+        setReflection(refData ? { id: refData.id, content: refData.content ?? '' } : null)
+      }
+
       setItem({ ...itemData, completed: !!sub, due_date: week?.due_date ?? '' })
       setLoading(false)
     }
@@ -104,11 +123,15 @@ export default function ItemDetailScreen() {
       return
     }
     setItem(prev => prev ? { ...prev, completed: true } : prev)
+    adjustOpenCount(-1)
     setCompleting(false)
   }
 
-  function goToReflection() {
-    router.push(`/(tabs)/reflections?bookId=${item?.book_id}`)
+  function handleReflectionSaved(content: string, reflectionId: string) {
+    setReflection({ id: reflectionId, content })
+    if (item && !item.completed) adjustOpenCount(-1)
+    setItem(prev => prev ? { ...prev, completed: true } : prev)
+    setEditorOpen(false)
   }
 
   if (loading) {
@@ -166,11 +189,24 @@ export default function ItemDetailScreen() {
           </View>
         )}
 
-        {/* Book reflection CTA */}
+        {/* Book reflection — written and saved right here */}
         {item.type === 'book_reflection' && (
-          <TouchableOpacity style={styles.reflectionCta} onPress={goToReflection} activeOpacity={0.8}>
-            <Text style={styles.reflectionCtaText}>Write your reflection →</Text>
-          </TouchableOpacity>
+          <>
+            {reflection?.content ? (
+              <View style={styles.reflectionPreview}>
+                <Text style={styles.reflectionPreviewLabel}>Your reflection</Text>
+                <Text style={styles.reflectionPreviewText} numberOfLines={6}>{reflection.content}</Text>
+              </View>
+            ) : null}
+            <TouchableOpacity style={styles.reflectionCta} onPress={() => setEditorOpen(true)} activeOpacity={0.8}>
+              <Text style={styles.reflectionCtaText}>
+                {reflection ? 'Edit your reflection' : 'Write your reflection →'}
+              </Text>
+            </TouchableOpacity>
+            {item.completed && (
+              <Text style={styles.reflectionDone}>✓ Reflection submitted — homework item complete</Text>
+            )}
+          </>
         )}
 
         {/* Written content */}
@@ -195,6 +231,18 @@ export default function ItemDetailScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {book && (
+        <ReflectionEditor
+          visible={editorOpen}
+          book={book}
+          userId={userId}
+          initialContent={reflection?.content ?? ''}
+          existingReflectionId={reflection?.id ?? null}
+          onSaved={handleReflectionSaved}
+          onClose={() => setEditorOpen(false)}
+        />
+      )}
     </SafeAreaView>
   )
 }
@@ -233,6 +281,17 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   reflectionCtaText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  reflectionPreview: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    marginTop: 16,
+  },
+  reflectionPreviewLabel: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 },
+  reflectionPreviewText: { fontSize: 14, color: '#374151', lineHeight: 21 },
+  reflectionDone: { fontSize: 13, color: '#16a34a', fontWeight: '600', textAlign: 'center', marginTop: 14 },
   writtenBox: {
     backgroundColor: '#fff',
     borderRadius: 14,

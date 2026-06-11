@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
+import { adjustOpenCount } from '../../lib/openAssignments'
 
 type HomeworkItem = {
   id: string
@@ -81,6 +82,7 @@ export default function ThisWeekScreen() {
   async function toggleItem(item: HomeworkItem) {
     const newCompleted = !item.completed
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, completed: newCompleted } : i))
+    adjustOpenCount(newCompleted ? -1 : 1)
 
     if (newCompleted) {
       const due = dueDate ? new Date(dueDate) : new Date()
@@ -93,6 +95,7 @@ export default function ThisWeekScreen() {
       }, { onConflict: 'student_id,homework_item_id' })
       if (error) {
         setItems(prev => prev.map(i => i.id === item.id ? { ...i, completed: false } : i))
+        adjustOpenCount(1)
         Alert.alert('Error', 'Could not save. Try again.')
       }
     } else {
@@ -102,14 +105,12 @@ export default function ThisWeekScreen() {
         .eq('homework_item_id', item.id)
       if (error) {
         setItems(prev => prev.map(i => i.id === item.id ? { ...i, completed: true } : i))
+        adjustOpenCount(-1)
         Alert.alert('Error', 'Could not save. Try again.')
       }
     }
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-  }
 
   if (loading) {
     return (
@@ -132,8 +133,8 @@ export default function ThisWeekScreen() {
         {/* Header */}
         <View style={styles.topRow}>
           <Text style={styles.schoolName}>School of Transformation</Text>
-          <TouchableOpacity onPress={handleSignOut}>
-            <Text style={styles.signOut}>Sign out</Text>
+          <TouchableOpacity onPress={() => router.push('/account')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.signOut}>Account</Text>
           </TouchableOpacity>
         </View>
 

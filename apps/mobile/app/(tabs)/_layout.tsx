@@ -1,11 +1,21 @@
+import { useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { View, StyleSheet, ColorValue } from 'react-native'
+import { ColorValue } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
+import { useOpenCount, fetchOpenAssignments } from '../../lib/openAssignments'
 
 function HomeIcon({ color }: { color: ColorValue }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={String(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </Svg>
+  )
+}
+
+function ChecklistIcon({ color }: { color: ColorValue }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={String(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
     </Svg>
   )
 }
@@ -18,15 +28,14 @@ function HistoryIcon({ color }: { color: ColorValue }) {
   )
 }
 
-function BookIcon({ color }: { color: ColorValue }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={String(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </Svg>
-  )
-}
-
 export default function TabsLayout() {
+  const openCount = useOpenCount()
+
+  // Populate the badge on app start, before the Open tab is ever visited
+  useEffect(() => {
+    fetchOpenAssignments()
+  }, [])
+
   return (
     <Tabs
       screenOptions={{
@@ -47,12 +56,17 @@ export default function TabsLayout() {
         options={{ title: 'This Week', tabBarIcon: ({ color }) => <HomeIcon color={color} /> }}
       />
       <Tabs.Screen
-        name="history"
-        options={{ title: 'History', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
+        name="open"
+        options={{
+          title: 'Open',
+          tabBarIcon: ({ color }) => <ChecklistIcon color={color} />,
+          tabBarBadge: openCount > 0 ? openCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 11 },
+        }}
       />
       <Tabs.Screen
-        name="reflections"
-        options={{ title: 'Reflections', tabBarIcon: ({ color }) => <BookIcon color={color} /> }}
+        name="history"
+        options={{ title: 'Previous Weeks', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
       />
     </Tabs>
   )
