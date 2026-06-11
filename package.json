@@ -1,10 +1,10 @@
 {
   "name": "school-of-transformation",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": ["apps/web"],
   "scripts": {
     "web": "npm run dev --workspace=apps/web",
-    "mobile": "npm run start --workspace=apps/mobile",
+    "mobile": "npm --prefix apps/mobile run start",
     "build": "npm run build --workspace=apps/web"
   }
 }
