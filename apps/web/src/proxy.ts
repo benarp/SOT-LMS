@@ -29,8 +29,10 @@ export async function proxy(request: NextRequest) {
   // Public routes — no auth required
   const isPublicRoute =
     pathname === '/login' ||
+    pathname === '/forgot-password' ||
     pathname.startsWith('/apply') ||
-    pathname.startsWith('/reference')
+    pathname.startsWith('/reference') ||
+    pathname.startsWith('/unsubscribe')
 
   // Redirect unauthenticated users to login (except public routes)
   if (!user && !isPublicRoute) {
@@ -44,7 +46,7 @@ export async function proxy(request: NextRequest) {
 
     // Applicants can only access /apply/* — redirect everything else
     if (role === 'applicant') {
-      if (!pathname.startsWith('/apply') && !pathname.startsWith('/reference')) {
+      if (!pathname.startsWith('/apply') && !pathname.startsWith('/reference') && pathname !== '/reset-password') {
         return NextResponse.redirect(new URL('/apply/status', request.url))
       }
       return supabaseResponse
