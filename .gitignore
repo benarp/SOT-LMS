@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Expo
+apps/mobile/.expo/
+apps/mobile/dist/
+
+# Env files — never commit
+.env
+.env.local
+.env*.local
+
+# Build
+build/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
