@@ -7,7 +7,7 @@ export default async function SettingsPage() {
 
   const { data: schoolYears } = await supabase
     .from('school_years')
-    .select('id, name, start_date, end_date, is_active, applications_open_at, applications_close_at')
+    .select('id, name, start_date, end_date, is_active, applications_open_at, applications_close_at, completed_at')
     .order('start_date', { ascending: false, nullsFirst: false })
 
   return (

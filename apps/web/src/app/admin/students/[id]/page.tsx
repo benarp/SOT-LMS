@@ -15,7 +15,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   const [{ data: profile }, authUserResult, { data: application }, { data: schoolYear }] =
     await Promise.all([
-      admin.from('profiles').select('id, full_name, email, role, group_id').eq('id', id).single(),
+      admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id').eq('id', id).single(),
       admin.auth.admin.getUserById(id),
       admin.from('applications').select('phone, city').eq('applicant_id', id).maybeSingle(),
       supabase.from('school_years').select('id, name').eq('is_active', true).single(),
@@ -48,6 +48,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   const groupName = (groups ?? []).find(g => g.id === profile.group_id)?.name
 
+  const { data: alumniYear } = profile.alumni_year_id
+    ? await admin.from('school_years').select('name').eq('id', profile.alumni_year_id).single()
+    : { data: null }
+
   return (
     <div className="max-w-4xl">
       <Link href="/admin/students" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
@@ -64,6 +68,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               ? ` · last signed in ${new Date(lastSignIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
               : ' · never signed in'}
           </p>
+          {alumniYear && (
+            <span className="inline-flex items-center mt-2 mr-2 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+              Alumni — {alumniYear.name}
+            </span>
+          )}
           {isDeactivated && (
             <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
               Deactivated

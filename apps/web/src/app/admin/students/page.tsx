@@ -27,11 +27,13 @@ export default async function UsersPage() {
     { data: profiles },
     { data: applications },
     { data: groups },
+    { data: allYears },
     currentWeekResult,
   ] = await Promise.all([
-    admin.from('profiles').select('id, full_name, email, role, group_id').order('full_name'),
+    admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id').order('full_name'),
     admin.from('applications').select('applicant_id, phone, city'),
     supabase.from('groups').select('id, name').eq('school_year_id', schoolYear?.id ?? '').order('name'),
+    admin.from('school_years').select('id, name'),
     // Get the current/most-recent week
     schoolYear
       ? supabase
@@ -87,6 +89,8 @@ export default async function UsersPage() {
     }
   }
 
+  const yearNameById = new Map((allYears ?? []).map(y => [y.id, y.name]))
+
   const users: UserRow[] = (profiles ?? []).map(p => {
     const { firstName, lastName } = splitName(p.full_name)
     const contact = contactByProfile[p.id] ?? { phone: null, city: null }
@@ -98,6 +102,7 @@ export default async function UsersPage() {
       phone: contact.phone,
       city: contact.city,
       role: p.role,
+      alumniYear: p.alumni_year_id ? yearNameById.get(p.alumni_year_id) ?? null : null,
       paymentStatus: null, // Stripe billing not yet implemented
       homeworkStatus: homeworkStatusMap[p.id] ?? null,
     }

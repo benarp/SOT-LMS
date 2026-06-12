@@ -41,11 +41,21 @@ export default function ThisWeekScreen() {
   const [weekId, setWeekId] = useState('')
   const [userId, setUserId] = useState('')
   const [error, setError] = useState('')
+  const [isAlumni, setIsAlumni] = useState(false)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setUserId(user.id)
+
+    const { data: prof } = await supabase
+      .from('profiles').select('role').eq('id', user.id).single()
+    if (prof?.role === 'alumni') {
+      setIsAlumni(true)
+      setLoading(false)
+      setRefreshing(false)
+      return
+    }
 
     const { data: schoolYear } = await supabase
       .from('school_years').select('id, name').eq('is_active', true).single()
@@ -148,7 +158,16 @@ export default function ThisWeekScreen() {
           </View>
         ))}
 
-        {error ? (
+        {isAlumni ? (
+          <View style={styles.alumniBox}>
+            <Text style={styles.alumniEmoji}>🎓</Text>
+            <Text style={styles.alumniTitle}>Your year is complete</Text>
+            <Text style={styles.alumniText}>
+              Thank you for being part of the School of Transformation. The reflections you wrote
+              on each book are kept for you in the web portal.
+            </Text>
+          </View>
+        ) : error ? (
           <Text style={styles.empty}>{error}</Text>
         ) : (
           <>
@@ -272,4 +291,8 @@ const styles = StyleSheet.create({
   itemDesc: { fontSize: 13, color: '#6b7280', marginTop: 3, lineHeight: 18 },
   chevron: { fontSize: 20, color: '#d1d5db', alignSelf: 'center', marginLeft: 4 },
   empty: { fontSize: 14, color: '#9ca3af', textAlign: 'center', marginTop: 40 },
+  alumniBox: { alignItems: 'center', marginTop: 80, paddingHorizontal: 20 },
+  alumniEmoji: { fontSize: 44, marginBottom: 14 },
+  alumniTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  alumniText: { fontSize: 14, color: '#6b7280', textAlign: 'center', lineHeight: 21 },
 })

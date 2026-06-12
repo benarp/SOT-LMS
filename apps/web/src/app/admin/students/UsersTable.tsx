@@ -12,6 +12,7 @@ export type UserRow = {
   phone: string | null
   city: string | null
   role: string
+  alumniYear: string | null
   paymentStatus: string | null
   homeworkStatus: 'current' | 'late' | null
 }
@@ -24,6 +25,7 @@ const roleLabels: Record<string, string> = {
   student: 'Student',
   group_leader: 'Group Leader',
   applicant: 'Applicant',
+  alumni: 'Alumni',
 }
 
 const roleOrder: Record<string, number> = {
@@ -31,6 +33,7 @@ const roleOrder: Record<string, number> = {
   group_leader: 1,
   student: 2,
   applicant: 3,
+  alumni: 4,
 }
 
 function sortValue(row: UserRow, key: SortKey): string | number {
@@ -144,16 +147,20 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
     )
   }
 
-  function RoleBadge({ role }: { role: string }) {
+  function RoleBadge({ role, alumniYear }: { role: string; alumniYear?: string | null }) {
     const colors: Record<string, string> = {
       admin: 'bg-purple-50 text-purple-700',
       group_leader: 'bg-blue-50 text-blue-700',
       student: 'bg-gray-100 text-gray-700',
       applicant: 'bg-orange-50 text-orange-700',
+      alumni: 'bg-emerald-50 text-emerald-700',
     }
+    const label = role === 'alumni' && alumniYear
+      ? `Alumni · ${alumniYear}`
+      : roleLabels[role] ?? role
     return (
       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors[role] ?? 'bg-gray-100 text-gray-600'}`}>
-        {roleLabels[role] ?? role}
+        {label}
       </span>
     )
   }
@@ -179,6 +186,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
           <option value="group_leader">Group Leader</option>
           <option value="student">Student</option>
           <option value="applicant">Applicant</option>
+          <option value="alumni">Alumni</option>
         </select>
         <span className="text-sm text-gray-400 ml-auto">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</span>
         <button
@@ -227,7 +235,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
                 <td className="px-4 py-3 text-gray-500">{user.city ?? <span className="text-gray-300">—</span>}</td>
                 <td className="px-4 py-3"><PaymentBadge status={user.paymentStatus} /></td>
                 <td className="px-4 py-3"><HomeworkBadge status={user.homeworkStatus} /></td>
-                <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
+                <td className="px-4 py-3"><RoleBadge role={user.role} alumniYear={user.alumniYear} /></td>
                 <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   <ImpersonateButton email={user.email} name={`${user.firstName} ${user.lastName}`.trim() || user.email} />
                 </td>

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAudit } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
 
 async function assertAdmin() {
@@ -49,6 +50,48 @@ export async function setActiveSchoolYear(schoolYearId: string): Promise<{ error
   revalidatePath('/admin')
   revalidatePath('/admin/curriculum')
   return {}
+}
+
+export async function completeSchoolYear(schoolYearId: string): Promise<{ error?: string; graduated?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  const { data: caller } = await supabase.from('profiles').select('role, email').eq('id', user.id).single()
+  if (caller?.role !== 'admin') return { error: 'Not authorized' }
+
+  const admin = createAdminClient()
+
+  const { data: year, error: yearError } = await admin
+    .from('school_years')
+    .update({ completed_at: new Date().toISOString(), is_active: false })
+    .eq('id', schoolYearId)
+    .select('name')
+    .single()
+  if (yearError) return { error: yearError.message }
+
+  // Graduate the cohort: every current student becomes an alumnus of this
+  // year. Returning students who'll lead groups next year get promoted
+  // afterward from their profile page.
+  const { data: graduated, error: gradError } = await admin
+    .from('profiles')
+    .update({ role: 'alumni', alumni_year_id: schoolYearId, group_id: null })
+    .eq('role', 'student')
+    .select('id')
+  if (gradError) return { error: gradError.message }
+
+  await logAudit({
+    actor_id: user.id,
+    actor_email: caller.email,
+    action: 'school_year_completed',
+    target_type: 'school_year',
+    target_id: schoolYearId,
+    detail: { name: year?.name, graduated: graduated?.length ?? 0 },
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/admin/students')
+  revalidatePath('/admin')
+  return { graduated: graduated?.length ?? 0 }
 }
 
 export async function updateApplicationWindow(formData: FormData): Promise<{ error?: string }> {

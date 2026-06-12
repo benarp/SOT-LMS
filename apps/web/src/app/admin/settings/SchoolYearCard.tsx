@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { setActiveSchoolYear, updateApplicationWindow } from '@/app/actions/schoolYears'
+import { setActiveSchoolYear, updateApplicationWindow, completeSchoolYear } from '@/app/actions/schoolYears'
 import { useRouter } from 'next/navigation'
 
 type SchoolYear = {
@@ -12,6 +12,7 @@ type SchoolYear = {
   is_active: boolean
   applications_open_at: string | null
   applications_close_at: string | null
+  completed_at?: string | null
 }
 
 function toDatetimeLocal(iso: string | null) {
@@ -31,6 +32,8 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
   const [editingWindow, setEditingWindow] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activating, setActivating] = useState(false)
+  const [completing, setCompleting] = useState(false)
+  const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -40,6 +43,19 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
     const result = await setActiveSchoolYear(year.id)
     if (result.error) setError(result.error)
     setActivating(false)
+    router.refresh()
+  }
+
+  async function handleComplete() {
+    if (!confirm(
+      `Complete ${year.name}?\n\nAll current students become alumni of this year — they keep their login and can view their book reflections, but stop receiving weekly emails and won't appear in next year's cohort.\n\nReturning students who'll lead groups can be promoted afterward from their profile.`
+    )) return
+    setCompleting(true)
+    setError('')
+    const result = await completeSchoolYear(year.id)
+    setCompleting(false)
+    if (result.error) { setError(result.error); return }
+    setNotice(`Year completed — ${result.graduated} student${result.graduated === 1 ? '' : 's'} moved to alumni.`)
     router.refresh()
   }
 
@@ -71,7 +87,12 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
             {year.is_active && (
               <span className="text-xs font-medium bg-gray-900 text-white px-2 py-0.5 rounded-full">Active</span>
             )}
-            {isOpen && (
+            {year.completed_at && (
+              <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                ✓ Completed {new Date(year.completed_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              </span>
+            )}
+            {isOpen && !year.completed_at && (
               <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Applications open</span>
             )}
           </div>
@@ -84,15 +105,26 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
           )}
         </div>
 
-        {!year.is_active && (
-          <button
-            onClick={handleSetActive}
-            disabled={activating}
-            className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex-shrink-0"
-          >
-            {activating ? 'Setting…' : 'Set as active'}
-          </button>
-        )}
+        <div className="flex gap-2 flex-shrink-0">
+          {!year.is_active && !year.completed_at && (
+            <button
+              onClick={handleSetActive}
+              disabled={activating}
+              className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {activating ? 'Setting…' : 'Set as active'}
+            </button>
+          )}
+          {year.is_active && !year.completed_at && (
+            <button
+              onClick={handleComplete}
+              disabled={completing}
+              className="text-xs text-green-700 border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+            >
+              {completing ? 'Completing…' : 'Complete this year'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Application window */}
@@ -154,6 +186,7 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
       )}
 
       {error && !editingWindow && <p className="text-xs text-red-500 mt-2">{error}</p>}
+      {notice && <p className="text-xs text-green-600 mt-2">{notice}</p>}
     </div>
   )
 }

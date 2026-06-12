@@ -8,6 +8,7 @@ const roleLabels: Record<string, string> = {
   group_leader: 'Group Leader',
   student: 'Student',
   applicant: 'Applicant',
+  alumni: 'Alumni',
 }
 
 export default function RoleSelect({ userId, currentRole }: { userId: string; currentRole: string }) {
