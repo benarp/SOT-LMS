@@ -39,9 +39,9 @@ export async function addHomeworkItem(formData: FormData): Promise<{ error?: str
   const supabase = await createClient()
   const weekId = formData.get('weekId') as string
   let type = formData.get('type') as string
-  const title = formData.get('title') as string
+  const title = (formData.get('title') as string).trim()
   const description = formData.get('description') as string
-  const externalUrl = formData.get('externalUrl') as string
+  const externalUrl = ((formData.get('externalUrl') as string) || '').trim()
   const content = formData.get('content') as string
   const bookId = formData.get('bookId') as string
   const sortOrder = parseInt(formData.get('sortOrder') as string)
@@ -70,9 +70,9 @@ export async function updateHomeworkItem(formData: FormData): Promise<{ error?: 
   const supabase = await createClient()
   const itemId = formData.get('itemId') as string
   const weekId = formData.get('weekId') as string
-  const title = formData.get('title') as string
+  const title = (formData.get('title') as string).trim()
   const description = formData.get('description') as string
-  const externalUrl = formData.get('externalUrl') as string
+  const externalUrl = ((formData.get('externalUrl') as string) || '').trim()
   const content = formData.get('content') as string
 
   const { error } = await supabase.from('homework_items').update({

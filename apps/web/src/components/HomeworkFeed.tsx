@@ -46,9 +46,9 @@ const typeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
   written: { label: 'Reflection', icon: reflectionIcon },
 }
 
-function getEmbedUrl(url: string): string | null {
+function getEmbedUrl(rawUrl: string): string | null {
   try {
-    const u = new URL(url)
+    const u = new URL(rawUrl.trim())
     if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
       const videoId = u.hostname.includes('youtu.be')
         ? u.pathname.slice(1)
@@ -59,8 +59,8 @@ function getEmbedUrl(url: string): string | null {
       const videoId = u.pathname.split('/').filter(Boolean).pop()
       if (videoId) return `https://player.vimeo.com/video/${videoId}`
     }
-    // Bible Project and other embeddable URLs
-    return url
+    // Other sites (e.g. Bible Project) typically block iframing — link out instead
+    return null
   } catch {
     return null
   }
@@ -171,6 +171,16 @@ export default function HomeworkFeed({
                       allowFullScreen
                     />
                   </div>
+                )}
+                {item.type === 'video' && item.external_url && !embedUrl && !done && (
+                  <a
+                    href={item.external_url.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    Watch video →
+                  </a>
                 )}
 
                 {/* Reading plan day-by-day */}

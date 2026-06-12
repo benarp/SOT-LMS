@@ -27,7 +27,9 @@ type Item = {
   due_date: string
 }
 
-function getEmbedUrl(url: string): string | null {
+function getEmbedUrl(rawUrl: string): string | null {
+  // Stored URLs may have stray whitespace; iOS WebKit rejects them outright
+  const url = rawUrl.trim()
   try {
     const u = new URL(url)
     // YouTube
