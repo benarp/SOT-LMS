@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getApplicationCycle } from '@/lib/applicationYear'
 import { redirect } from 'next/navigation'
 import QuestionnaireForm from './QuestionnaireForm'
 
@@ -8,7 +9,7 @@ export default async function QuestionnairePage() {
 
   if (!user) redirect('/apply/account')
 
-  const { data: schoolYear } = await supabase.from('school_years').select('id, name').eq('is_active', true).single()
+  const { year: schoolYear } = await getApplicationCycle()
   if (!schoolYear) {
     return (
       <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">

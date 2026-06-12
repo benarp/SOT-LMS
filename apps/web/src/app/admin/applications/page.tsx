@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getApplicationCycle } from '@/lib/applicationYear'
 import Link from 'next/link'
 
 const statusBadge: Record<string, { label: string; classes: string }> = {
@@ -17,7 +18,7 @@ const refBadge: Record<string, { label: string; classes: string }> = {
 export default async function AdminApplicationsPage() {
   const supabase = await createClient()
 
-  const { data: schoolYear } = await supabase.from('school_years').select('id, name').eq('is_active', true).single()
+  const { year: schoolYear } = await getApplicationCycle()
 
   const { data: applications } = schoolYear
     ? await supabase

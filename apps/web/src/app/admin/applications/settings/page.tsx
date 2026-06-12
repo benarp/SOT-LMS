@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getApplicationCycle } from '@/lib/applicationYear'
 import Link from 'next/link'
 import ApplicationSettingsForm from './ApplicationSettingsForm'
 
@@ -20,11 +21,7 @@ const DEFAULTS = {
 export default async function ApplicationSettingsPage() {
   const supabase = await createClient()
 
-  const { data: schoolYear } = await supabase
-    .from('school_years')
-    .select('id, name')
-    .eq('is_active', true)
-    .single()
+  const { year: schoolYear } = await getApplicationCycle()
 
   const { data: settings } = schoolYear
     ? await supabase

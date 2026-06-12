@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getApplicationCycle } from '@/lib/applicationYear'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -14,7 +15,7 @@ export default async function ApplicationStatusPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/apply/account')
 
-  const { data: schoolYear } = await supabase.from('school_years').select('id, name').eq('is_active', true).single()
+  const { year: schoolYear } = await getApplicationCycle()
   if (!schoolYear) redirect('/apply')
 
   const { data: app } = await supabase

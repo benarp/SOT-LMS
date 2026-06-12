@@ -1,24 +1,10 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { getApplicationCycle } from '@/lib/applicationYear'
 
 export default async function ApplyLandingPage() {
-  const supabase = await createClient()
-  const { data: schoolYear } = await supabase
-    .from('school_years')
-    .select('name, applications_open_at, applications_close_at')
-    .eq('is_active', true)
-    .single()
+  const { year: schoolYear, isOpen, opensAt, closesAt } = await getApplicationCycle()
 
   const now = new Date()
-  const opensAt = schoolYear?.applications_open_at ? new Date(schoolYear.applications_open_at) : null
-  const closesAt = schoolYear?.applications_close_at ? new Date(schoolYear.applications_close_at) : null
-
-  const isOpen = opensAt && closesAt
-    ? opensAt <= now && now <= closesAt
-    : opensAt && !closesAt
-    ? opensAt <= now
-    : false
-
   const notOpenYet = opensAt && opensAt > now
   const closed = closesAt && closesAt < now
 

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getApplicationCycle } from '@/lib/applicationYear'
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 
@@ -22,9 +23,11 @@ export async function initApplicant(fullName: string): Promise<{ error?: string 
   // Update profile: set name + applicant role
   await admin.from('profiles').update({ full_name: fullName, role: 'applicant' }).eq('id', user.id)
 
-  // Get active school year
-  const { data: schoolYear } = await admin.from('school_years').select('id').eq('is_active', true).single()
-  if (!schoolYear) return { error: 'No active school year found. Contact an admin.' }
+  // Applications belong to the open application cycle, not the active year
+  const cycle = await getApplicationCycle()
+  if (!cycle.year) return { error: 'No application cycle found. Contact an admin.' }
+  if (!cycle.isOpen) return { error: 'Applications are currently closed.' }
+  const schoolYear = cycle.year
 
   // Create application if it doesn't exist
   await admin.from('applications').upsert(
@@ -45,7 +48,7 @@ export async function getApplicationStep(): Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { step: 'questionnaire' }
 
-  const { data: schoolYear } = await supabase.from('school_years').select('id').eq('is_active', true).single()
+  const { year: schoolYear } = await getApplicationCycle()
   if (!schoolYear) return { step: 'questionnaire' }
 
   const { data: app } = await supabase
@@ -82,8 +85,8 @@ export async function updateApplicationSettings(formData: FormData): Promise<{ e
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') return { error: 'Not authorized' }
 
-  const { data: schoolYear } = await supabase.from('school_years').select('id').eq('is_active', true).single()
-  if (!schoolYear) return { error: 'No active school year' }
+  const { year: schoolYear } = await getApplicationCycle()
+  if (!schoolYear) return { error: 'No application cycle configured' }
 
   const updates = {
     school_year_id: schoolYear.id,
@@ -119,8 +122,8 @@ export async function saveQuestionnaire(formData: FormData): Promise<{ error?: s
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { data: schoolYear } = await supabase.from('school_years').select('id').eq('is_active', true).single()
-  if (!schoolYear) return { error: 'No active school year' }
+  const { year: schoolYear } = await getApplicationCycle()
+  if (!schoolYear) return { error: 'No application cycle configured' }
 
   const updates = {
     full_name: formData.get('full_name') as string,
@@ -156,8 +159,8 @@ export async function savePastorInfo(formData: FormData): Promise<{ error?: stri
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { data: schoolYear } = await supabase.from('school_years').select('id').eq('is_active', true).single()
-  if (!schoolYear) return { error: 'No active school year' }
+  const { year: schoolYear } = await getApplicationCycle()
+  if (!schoolYear) return { error: 'No application cycle configured' }
 
   const { data: app } = await supabase
     .from('applications')
