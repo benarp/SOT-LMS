@@ -35,7 +35,7 @@ export async function createSchoolYear(formData: FormData): Promise<{ error?: st
   return {}
 }
 
-export async function setActiveSchoolYear(schoolYearId: string): Promise<{ error?: string }> {
+export async function setActiveSchoolYear(schoolYearId: string): Promise<{ error?: string; enrolled?: number }> {
   const { error: authError } = await assertAdmin()
   if (authError) return { error: authError }
 
@@ -44,12 +44,33 @@ export async function setActiveSchoolYear(schoolYearId: string): Promise<{ error
   // Deactivate all, then activate the selected one
   await admin.from('school_years').update({ is_active: false }).neq('id', 'none')
   const { error } = await admin.from('school_years').update({ is_active: true }).eq('id', schoolYearId)
-
   if (error) return { error: error.message }
+
+  // Enroll everyone accepted for this year. Applicants and returning alumni
+  // become students; admins/leaders are never downgraded.
+  const { data: approvedApps } = await admin
+    .from('applications')
+    .select('applicant_id')
+    .eq('school_year_id', schoolYearId)
+    .eq('status', 'approved')
+
+  let enrolled = 0
+  const applicantIds = (approvedApps ?? []).map(a => a.applicant_id)
+  if (applicantIds.length > 0) {
+    const { data: promoted } = await admin
+      .from('profiles')
+      .update({ role: 'student' })
+      .in('id', applicantIds)
+      .in('role', ['applicant', 'alumni'])
+      .select('id')
+    enrolled = promoted?.length ?? 0
+  }
+
   revalidatePath('/admin/settings')
   revalidatePath('/admin')
   revalidatePath('/admin/curriculum')
-  return {}
+  revalidatePath('/admin/students')
+  return { enrolled }
 }
 
 export async function completeSchoolYear(schoolYearId: string): Promise<{ error?: string; graduated?: number }> {

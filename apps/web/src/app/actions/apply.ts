@@ -274,7 +274,7 @@ export async function approveApplication(applicationId: string, notes?: string):
 
   const { data: app } = await admin
     .from('applications')
-    .select('applicant_id, full_name')
+    .select('applicant_id, full_name, school_year_id')
     .eq('id', applicationId)
     .single()
 
@@ -288,8 +288,13 @@ export async function approveApplication(applicationId: string, notes?: string):
     updated_at: new Date().toISOString(),
   }).eq('id', applicationId)
 
-  // Upgrade role to student
-  await admin.from('profiles').update({ role: 'student' }).eq('id', app.applicant_id)
+  // Enroll immediately only if their year is already running; otherwise they
+  // stay an accepted applicant and are enrolled when the year is activated.
+  const { data: appYear } = await admin
+    .from('school_years').select('is_active').eq('id', app.school_year_id).single()
+  if (appYear?.is_active) {
+    await admin.from('profiles').update({ role: 'student' }).eq('id', app.applicant_id)
+  }
 
   // Send approval email
   if (process.env.RESEND_API_KEY) {

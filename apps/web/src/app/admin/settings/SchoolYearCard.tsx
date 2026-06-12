@@ -42,6 +42,9 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
     setActivating(true)
     const result = await setActiveSchoolYear(year.id)
     if (result.error) setError(result.error)
+    else if (result.enrolled && result.enrolled > 0) {
+      setNotice(`Year activated — ${result.enrolled} accepted applicant${result.enrolled === 1 ? '' : 's'} enrolled as student${result.enrolled === 1 ? '' : 's'}.`)
+    }
     setActivating(false)
     router.refresh()
   }
