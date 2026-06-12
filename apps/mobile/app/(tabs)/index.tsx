@@ -21,10 +21,12 @@ type HomeworkItem = {
 type Announcement = { id: string; title: string; body: string }
 
 const typeLabels: Record<string, string> = {
-  bible_reading: 'Bible reading',
+  bible_reading: 'Scripture Reading',
+  book_reading: 'Book Reading',
   video: 'Video',
-  book_reflection: 'Book reflection',
-  written: 'Written',
+  book_reflection: 'Reflection',
+  reflection: 'Reflection',
+  written: 'Reflection',
 }
 
 export default function ThisWeekScreen() {

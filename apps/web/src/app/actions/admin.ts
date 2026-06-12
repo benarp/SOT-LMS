@@ -38,13 +38,17 @@ export async function addWeek(formData: FormData): Promise<{ error?: string }> {
 export async function addHomeworkItem(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const weekId = formData.get('weekId') as string
-  const type = formData.get('type') as string
+  let type = formData.get('type') as string
   const title = formData.get('title') as string
   const description = formData.get('description') as string
   const externalUrl = formData.get('externalUrl') as string
   const content = formData.get('content') as string
   const bookId = formData.get('bookId') as string
   const sortOrder = parseInt(formData.get('sortOrder') as string)
+
+  // Book-linked reflections keep the dedicated type so the existing
+  // auto-marking flow (saving a book reflection completes the item) works
+  if (type === 'reflection' && bookId) type = 'book_reflection'
 
   const { error } = await supabase.from('homework_items').insert({
     week_id: weekId,

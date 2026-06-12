@@ -53,11 +53,15 @@ export default async function DashboardPage() {
   const itemIds = (items || []).map(i => i.id)
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('homework_item_id, completed_at, is_late')
+    .select('homework_item_id, completed_at, is_late, response_text')
     .eq('student_id', user.id)
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
 
   const submittedIds = new Set((submissions || []).map(s => s.homework_item_id))
+  const responseByItem: Record<string, string> = {}
+  for (const s of submissions || []) {
+    if (s.response_text) responseByItem[s.homework_item_id] = s.response_text
+  }
 
   // Get active announcements
   const { data: announcements } = await supabase
@@ -118,9 +122,11 @@ export default async function DashboardPage() {
         items={(items || []).map(item => ({
           ...item,
           completed: submittedIds.has(item.id),
+          response: responseByItem[item.id] ?? null,
         }))}
         studentId={user.id}
         weekId={currentWeek.id}
+        weekDueDate={currentWeek.due_date}
       />
     </div>
   )

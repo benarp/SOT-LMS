@@ -45,16 +45,21 @@ export default function AddHomeworkItemForm({ weekId, books, nextSortOrder }: { 
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
         <select name="type" value={type} onChange={e => setType(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
-          <option value="bible_reading">Bible reading</option>
+          <option value="bible_reading">Scripture Reading</option>
+          <option value="book_reading">Book Reading</option>
           <option value="video">Video</option>
-          <option value="book_reflection">Book reflection</option>
-          <option value="written">Written submission</option>
+          <option value="reflection">Reflection</option>
         </select>
       </div>
 
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
-        <input name="title" required placeholder={type === 'bible_reading' ? 'Genesis 1–3' : type === 'video' ? 'Bible Project: Genesis Overview' : 'Reflection question'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+        <input name="title" required placeholder={
+          type === 'bible_reading' ? 'Genesis 1–3'
+          : type === 'book_reading' ? 'Spiritual Disciplines, ch. 1–2'
+          : type === 'video' ? 'Bible Project: Genesis Overview'
+          : 'Reflection question'
+        } className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
       </div>
 
       <div>
@@ -62,18 +67,20 @@ export default function AddHomeworkItemForm({ weekId, books, nextSortOrder }: { 
         <input name="description" placeholder="Additional context for students" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
       </div>
 
-      {(type === 'bible_reading' || type === 'written') && (
+      {(type === 'bible_reading' || type === 'book_reading' || type === 'reflection') && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            {type === 'bible_reading' ? 'Day-by-day reading' : 'Instructions'}
+            {type === 'reflection' ? 'Prompt' : 'Day-by-day reading'}
             <span className="text-gray-400 ml-1">(optional)</span>
           </label>
           <textarea
             name="content"
             rows={5}
-            placeholder={type === 'bible_reading'
-              ? 'Day 1: Genesis 1–2\nDay 2: Genesis 3–5\nDay 3: Genesis 6–9\n...'
-              : 'Instructions or prompts for students…'
+            placeholder={type === 'reflection'
+              ? 'The prompt or questions students respond to…'
+              : type === 'bible_reading'
+                ? 'Day 1: Genesis 1–2\nDay 2: Genesis 3–5\nDay 3: Genesis 6–9\n...'
+                : 'Day 1: Chapter 1\nDay 2: Chapter 2\n...'
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-y font-mono"
           />
@@ -87,11 +94,11 @@ export default function AddHomeworkItemForm({ weekId, books, nextSortOrder }: { 
         </div>
       )}
 
-      {type === 'book_reflection' && (
+      {type === 'reflection' && (
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Book</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Book <span className="text-gray-400">(optional — links the reflection to a book)</span></label>
           <select name="bookId" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
-            <option value="">Select a book…</option>
+            <option value="">No book — standalone reflection</option>
             {books.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
           </select>
         </div>

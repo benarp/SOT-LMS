@@ -48,8 +48,11 @@ export default function EditItemButton({ item }: { item: Item }) {
     )
   }
 
-  const showContent = item.type === 'bible_reading' || item.type === 'written'
+  const showContent = ['bible_reading', 'book_reading', 'reflection', 'written'].includes(item.type)
   const showUrl = item.type === 'video'
+  const contentLabel = item.type === 'bible_reading' || item.type === 'book_reading'
+    ? 'Day-by-day reading'
+    : 'Prompt'
 
   return (
     <form onSubmit={handleSubmit} className="w-full mt-3 pt-3 border-t border-gray-100 space-y-3">
@@ -79,14 +82,14 @@ export default function EditItemButton({ item }: { item: Item }) {
       {showContent && (
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">
-            {item.type === 'bible_reading' ? 'Day-by-day reading' : 'Instructions'}
+            {contentLabel}
             <span className="text-gray-400 ml-1">(optional)</span>
           </label>
           <textarea
             name="content"
             defaultValue={item.content ?? ''}
             rows={5}
-            placeholder={item.type === 'bible_reading' ? 'Day 1: Genesis 1–2\nDay 2: Genesis 3–5\n...' : 'Instructions for students…'}
+            placeholder={contentLabel === 'Day-by-day reading' ? 'Day 1: Genesis 1–2\nDay 2: Genesis 3–5\n...' : 'The prompt or questions students respond to…'}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-y font-mono"
           />
         </div>

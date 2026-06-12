@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator,
-  TouchableOpacity, Alert, Dimensions,
+  TouchableOpacity, Alert, Dimensions, TextInput,
+  KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
@@ -57,6 +58,8 @@ export default function ItemDetailScreen() {
   const [book, setBook] = useState<{ id: string; title: string } | null>(null)
   const [reflection, setReflection] = useState<{ id: string; content: string } | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [responseDraft, setResponseDraft] = useState('')
+  const [savingResponse, setSavingResponse] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -80,10 +83,12 @@ export default function ItemDetailScreen() {
 
       const { data: sub } = await supabase
         .from('submissions')
-        .select('id')
+        .select('id, response_text')
         .eq('student_id', user.id)
         .eq('homework_item_id', itemId)
         .single()
+
+      if (sub?.response_text) setResponseDraft(sub.response_text)
 
       // For book reflections, load the book and any existing reflection
       // so the editor opens right here instead of a separate tab
@@ -134,6 +139,31 @@ export default function ItemDetailScreen() {
     setEditorOpen(false)
   }
 
+  async function saveResponse() {
+    if (!item || savingResponse) return
+    if (!responseDraft.trim()) {
+      Alert.alert('Empty response', 'Write something before saving.')
+      return
+    }
+    setSavingResponse(true)
+    const isLate = item.due_date ? new Date() > new Date(item.due_date) : false
+    const { error } = await supabase.from('submissions').upsert({
+      student_id: userId,
+      homework_item_id: itemId,
+      completed_at: new Date().toISOString(),
+      is_late: isLate,
+      response_text: responseDraft.trim(),
+    }, { onConflict: 'student_id,homework_item_id' })
+    setSavingResponse(false)
+
+    if (error) {
+      Alert.alert('Error', 'Could not save. Try again.')
+      return
+    }
+    if (!item.completed) adjustOpenCount(-1)
+    setItem(prev => prev ? { ...prev, completed: true } : prev)
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -157,9 +187,10 @@ export default function ItemDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.typeLabel}>{
-          { bible_reading: 'Bible reading', video: 'Video', book_reflection: 'Book reflection', written: 'Written submission' }[item.type] ?? item.type
+          { bible_reading: 'Scripture Reading', book_reading: 'Book Reading', video: 'Video', book_reflection: 'Reflection', reflection: 'Reflection', written: 'Reflection' }[item.type] ?? item.type
         }</Text>
         <Text style={styles.title}>{item.title}</Text>
         {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
@@ -177,8 +208,8 @@ export default function ItemDetailScreen() {
           </View>
         )}
 
-        {/* Bible reading day-by-day */}
-        {item.type === 'bible_reading' && days.length > 0 && (
+        {/* Reading plan day-by-day */}
+        {(item.type === 'bible_reading' || item.type === 'book_reading') && days.length > 0 && (
           <View style={styles.daysContainer}>
             {days.map((day, i) => (
               <View key={i} style={styles.dayRow}>
@@ -209,15 +240,42 @@ export default function ItemDetailScreen() {
           </>
         )}
 
-        {/* Written content */}
-        {item.type === 'written' && item.content && (
-          <View style={styles.writtenBox}>
-            <Text style={styles.writtenText}>{item.content}</Text>
-          </View>
+        {/* Reflection: prompt + response box */}
+        {(item.type === 'reflection' || item.type === 'written') && (
+          <>
+            {item.content ? (
+              <View style={styles.writtenBox}>
+                <Text style={styles.writtenText}>{item.content}</Text>
+              </View>
+            ) : null}
+            <TextInput
+              style={styles.responseInput}
+              value={responseDraft}
+              onChangeText={setResponseDraft}
+              multiline
+              placeholder="Write your response here…"
+              placeholderTextColor="#9ca3af"
+              textAlignVertical="top"
+            />
+            <TouchableOpacity
+              style={[styles.completeBtn, savingResponse && styles.completeBtnDisabled]}
+              onPress={saveResponse}
+              disabled={savingResponse}
+              activeOpacity={0.8}
+            >
+              {savingResponse
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.completeBtnText}>{item.completed ? 'Update response' : 'Save response'}</Text>
+              }
+            </TouchableOpacity>
+            {item.completed && (
+              <Text style={styles.reflectionDone}>✓ Response saved — item complete</Text>
+            )}
+          </>
         )}
 
-        {/* Complete button (not for book reflections — those complete via the reflections tab) */}
-        {item.type !== 'book_reflection' && (
+        {/* Complete button (reflections complete by saving a response) */}
+        {item.type !== 'book_reflection' && item.type !== 'reflection' && item.type !== 'written' && (
           <TouchableOpacity
             style={[styles.completeBtn, item.completed && styles.completeBtnDone, completing && styles.completeBtnDisabled]}
             onPress={markComplete}
@@ -231,6 +289,7 @@ export default function ItemDetailScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {book && (
         <ReflectionEditor
@@ -301,6 +360,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   writtenText: { fontSize: 14, color: '#374151', lineHeight: 22 },
+  responseInput: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    marginTop: 16,
+    minHeight: 140,
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 21,
+  },
   completeBtn: {
     backgroundColor: '#111827',
     borderRadius: 14,

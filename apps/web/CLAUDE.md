@@ -50,7 +50,7 @@ supabase/
 - `groups` — discipleship groups, each with a `leader_id`
 - `books` — 4 books per school year, have associated reflections
 - `weeks` — numbered weeks per school year, each has a `due_date`
-- `homework_items` — belong to a week; types: `bible_reading`, `video`, `book_reflection`, `written`
+- `homework_items` — belong to a week; types: `bible_reading` (Scripture Reading), `book_reading`, `video`, `book_reflection`, `reflection` (typed response stored in `submissions.response_text`)
 - `submissions` — completion records (student_id + homework_item_id, unique); has `is_late` flag
 - `book_reflections` — separate from submissions; stores typed content or `file_url`
 - `announcements` — admin-published; `publish_at` supports scheduling; `target_group_id` null = all students

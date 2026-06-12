@@ -47,10 +47,11 @@ The primary view for enrolled students.
 - **Book Reflections** — a persistent list of the year's books; students write and save reflections per book
 
 **Homework item types:**
-- `Bible reading` — day-by-day reading list (e.g., "Day 1: Genesis 1–3")
+- `Scripture Reading` — day-by-day reading list (e.g., "Day 1: Genesis 1–3")
+- `Book Reading` — day-by-day book reading plan
 - `Video` — embedded YouTube or Vimeo player
 - `Book reflection` — links to the Reflections tab for the matching book
-- `Written submission` — written instructions with a completion checkbox
+- `Reflection` — a prompt with a typed response box; saving the response completes the item
 
 Completion is self-reported and trust-based. No external verification.
 

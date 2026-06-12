@@ -22,6 +22,31 @@ export async function markComplete(homeworkItemId: string, weekDueDate: string) 
   revalidatePath('/dashboard')
 }
 
+export async function submitReflection(
+  homeworkItemId: string,
+  weekDueDate: string,
+  responseText: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (!responseText.trim()) return { error: 'Write something before saving.' }
+
+  const isLate = new Date(weekDueDate) < new Date()
+
+  const { error } = await supabase.from('submissions').upsert({
+    student_id: user.id,
+    homework_item_id: homeworkItemId,
+    is_late: isLate,
+    completed_at: new Date().toISOString(),
+    response_text: responseText.trim(),
+  }, { onConflict: 'student_id,homework_item_id' })
+
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard')
+  return {}
+}
+
 export async function markIncomplete(homeworkItemId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

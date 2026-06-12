@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { markComplete, markIncomplete } from '@/app/actions/submissions'
+import { markComplete, markIncomplete, submitReflection } from '@/app/actions/submissions'
 
 type HomeworkItem = {
   id: string
-  type: 'bible_reading' | 'video' | 'book_reflection' | 'written'
+  type: string
   title: string
   description: string | null
   external_url: string | null
@@ -13,17 +13,24 @@ type HomeworkItem = {
   book_id: string | null
   sort_order: number
   completed: boolean
+  response: string | null
 }
 
-const typeConfig = {
-  bible_reading: {
-    label: 'Bible reading',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-      </svg>
-    ),
-  },
+const bookIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+  </svg>
+)
+
+const reflectionIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+)
+
+const typeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
+  bible_reading: { label: 'Scripture Reading', icon: bookIcon },
+  book_reading: { label: 'Book Reading', icon: bookIcon },
   video: {
     label: 'Video',
     icon: (
@@ -33,22 +40,10 @@ const typeConfig = {
       </svg>
     ),
   },
-  book_reflection: {
-    label: 'Book reflection',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
-    ),
-  },
-  written: {
-    label: 'Written submission',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-  },
+  book_reflection: { label: 'Reflection', icon: reflectionIcon },
+  reflection: { label: 'Reflection', icon: reflectionIcon },
+  // legacy value, in case the type migration hasn't run yet
+  written: { label: 'Reflection', icon: reflectionIcon },
 }
 
 function getEmbedUrl(url: string): string | null {
@@ -71,18 +66,28 @@ function getEmbedUrl(url: string): string | null {
   }
 }
 
+const isReflectionType = (type: string) => type === 'reflection' || type === 'written'
+const isReadingType = (type: string) => type === 'bible_reading' || type === 'book_reading'
+
 export default function HomeworkFeed({
   items,
   studentId,
   weekId,
+  weekDueDate,
 }: {
   items: HomeworkItem[]
   studentId: string
   weekId: string
+  weekDueDate: string
 }) {
   const [optimistic, setOptimistic] = useState<Record<string, boolean>>(
     Object.fromEntries(items.map(i => [i.id, i.completed]))
   )
+  const [drafts, setDrafts] = useState<Record<string, string>>(
+    Object.fromEntries(items.map(i => [i.id, i.response ?? '']))
+  )
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [savingId, setSavingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function toggle(item: HomeworkItem) {
@@ -91,13 +96,28 @@ export default function HomeworkFeed({
     startTransition(async () => {
       try {
         if (nowComplete) {
-          await markComplete(item.id, '')
+          await markComplete(item.id, weekDueDate)
         } else {
           await markIncomplete(item.id)
         }
       } catch {
         setOptimistic(prev => ({ ...prev, [item.id]: !nowComplete }))
       }
+    })
+  }
+
+  function saveReflection(item: HomeworkItem) {
+    const text = drafts[item.id] ?? ''
+    setErrors(prev => ({ ...prev, [item.id]: '' }))
+    setSavingId(item.id)
+    startTransition(async () => {
+      const result = await submitReflection(item.id, weekDueDate, text)
+      setSavingId(null)
+      if (result.error) {
+        setErrors(prev => ({ ...prev, [item.id]: result.error! }))
+        return
+      }
+      setOptimistic(prev => ({ ...prev, [item.id]: true }))
     })
   }
 
@@ -109,11 +129,12 @@ export default function HomeworkFeed({
     <div className="space-y-3">
       {items.map(item => {
         const done = optimistic[item.id]
-        const config = typeConfig[item.type]
+        const config = typeConfig[item.type] ?? typeConfig.written
         const embedUrl = item.type === 'video' && item.external_url ? getEmbedUrl(item.external_url) : null
-        const days = item.type === 'bible_reading' && item.content
+        const days = isReadingType(item.type) && item.content
           ? item.content.split('\n').filter(l => l.trim().length > 0)
           : []
+        const reflection = isReflectionType(item.type)
 
         return (
           <div
@@ -152,7 +173,7 @@ export default function HomeworkFeed({
                   </div>
                 )}
 
-                {/* Bible reading day-by-day */}
+                {/* Reading plan day-by-day */}
                 {days.length > 0 && !done && (
                   <ul className="mt-3 space-y-1.5">
                     {days.map((day, i) => (
@@ -164,29 +185,61 @@ export default function HomeworkFeed({
                   </ul>
                 )}
 
-                {/* Written instructions */}
-                {item.type === 'written' && item.content && !done && (
-                  <p className="mt-2 text-sm text-gray-500 whitespace-pre-line">{item.content}</p>
+                {/* Reflection: prompt + response box */}
+                {reflection && (
+                  <div className="mt-3">
+                    {item.content && !done && (
+                      <p className="text-sm text-gray-500 whitespace-pre-line mb-2">{item.content}</p>
+                    )}
+                    <textarea
+                      value={drafts[item.id] ?? ''}
+                      onChange={e => setDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      rows={done ? 3 : 5}
+                      placeholder="Write your response here…"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-y"
+                    />
+                    {errors[item.id] && <p className="text-xs text-red-600 mt-1">{errors[item.id]}</p>}
+                    {(drafts[item.id] ?? '').trim() !== (item.response ?? '').trim() || !done ? (
+                      <button
+                        onClick={() => saveReflection(item)}
+                        disabled={savingId === item.id}
+                        className="mt-2 bg-gray-900 text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingId === item.id ? 'Saving…' : done ? 'Update response' : 'Save response'}
+                      </button>
+                    ) : (
+                      <p className="text-xs text-green-600 mt-1.5">✓ Response saved</p>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Complete button */}
-              <button
-                onClick={() => toggle(item)}
-                disabled={pending}
-                className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                  done
-                    ? 'bg-gray-900 border-gray-900'
-                    : 'border-gray-300 hover:border-gray-500'
-                }`}
-                aria-label={done ? 'Mark incomplete' : 'Mark complete'}
-              >
-                {done && (
+              {/* Complete button — reflections complete by saving a response */}
+              {!reflection && (
+                <button
+                  onClick={() => toggle(item)}
+                  disabled={pending}
+                  className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                    done
+                      ? 'bg-gray-900 border-gray-900'
+                      : 'border-gray-300 hover:border-gray-500'
+                  }`}
+                  aria-label={done ? 'Mark incomplete' : 'Mark complete'}
+                >
+                  {done && (
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              )}
+              {reflection && done && (
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center">
                   <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                   </svg>
-                )}
-              </button>
+                </div>
+              )}
             </div>
           </div>
         )
