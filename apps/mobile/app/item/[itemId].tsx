@@ -197,13 +197,23 @@ export default function ItemDetailScreen() {
         <Text style={styles.title}>{item.title}</Text>
         {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
 
-        {/* Video embed */}
+        {/* Video embed — wrapped in an HTML page with a real origin, because
+            YouTube refuses originless WebView requests (player error 153/154) */}
         {item.type === 'video' && embedUrl && (
           <View style={styles.videoContainer}>
             <WebView
-              source={{ uri: embedUrl }}
+              source={{
+                html: `<!DOCTYPE html><html><head>
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <style>html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden}iframe{width:100%;height:100%;border:0}</style>
+                  </head><body>
+                  <iframe src="${embedUrl}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+                  </body></html>`,
+                baseUrl: 'https://sot-lms.vercel.app',
+              }}
               style={{ width: SCREEN_WIDTH - 32, height: VIDEO_HEIGHT }}
               allowsInlineMediaPlayback
+              allowsFullscreenVideo
               mediaPlaybackRequiresUserAction={false}
               javaScriptEnabled
             />
