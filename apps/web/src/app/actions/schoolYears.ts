@@ -94,6 +94,48 @@ export async function completeSchoolYear(schoolYearId: string): Promise<{ error?
   return { graduated: graduated?.length ?? 0 }
 }
 
+export async function reopenSchoolYear(schoolYearId: string): Promise<{ error?: string; restored?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  const { data: caller } = await supabase.from('profiles').select('role, email').eq('id', user.id).single()
+  if (caller?.role !== 'admin') return { error: 'Not authorized' }
+
+  const admin = createAdminClient()
+
+  const { data: year, error: yearError } = await admin
+    .from('school_years')
+    .update({ completed_at: null })
+    .eq('id', schoolYearId)
+    .select('name')
+    .single()
+  if (yearError) return { error: yearError.message }
+
+  // Undo the graduation — but only for those still alumni of this year,
+  // so anyone already promoted (e.g. to group leader) is left alone.
+  const { data: restored, error: restoreError } = await admin
+    .from('profiles')
+    .update({ role: 'student', alumni_year_id: null })
+    .eq('role', 'alumni')
+    .eq('alumni_year_id', schoolYearId)
+    .select('id')
+  if (restoreError) return { error: restoreError.message }
+
+  await logAudit({
+    actor_id: user.id,
+    actor_email: caller.email,
+    action: 'school_year_reopened',
+    target_type: 'school_year',
+    target_id: schoolYearId,
+    detail: { name: year?.name, restored: restored?.length ?? 0 },
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/admin/students')
+  revalidatePath('/admin')
+  return { restored: restored?.length ?? 0 }
+}
+
 export async function updateApplicationWindow(formData: FormData): Promise<{ error?: string }> {
   const { error: authError } = await assertAdmin()
   if (authError) return { error: authError }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { setActiveSchoolYear, updateApplicationWindow, completeSchoolYear } from '@/app/actions/schoolYears'
+import { setActiveSchoolYear, updateApplicationWindow, completeSchoolYear, reopenSchoolYear } from '@/app/actions/schoolYears'
 import { useRouter } from 'next/navigation'
 
 type SchoolYear = {
@@ -56,6 +56,19 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
     setCompleting(false)
     if (result.error) { setError(result.error); return }
     setNotice(`Year completed — ${result.graduated} student${result.graduated === 1 ? '' : 's'} moved to alumni.`)
+    router.refresh()
+  }
+
+  async function handleReopen() {
+    if (!confirm(
+      `Reopen ${year.name}?\n\nAlumni of this year are restored to students. Anyone already promoted to another role (e.g. group leader) is left as-is. The year is not re-activated automatically.`
+    )) return
+    setCompleting(true)
+    setError('')
+    const result = await reopenSchoolYear(year.id)
+    setCompleting(false)
+    if (result.error) { setError(result.error); return }
+    setNotice(`Year reopened — ${result.restored} alumni restored to students.`)
     router.refresh()
   }
 
@@ -122,6 +135,15 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
               className="text-xs text-green-700 border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
             >
               {completing ? 'Completing…' : 'Complete this year'}
+            </button>
+          )}
+          {year.completed_at && (
+            <button
+              onClick={handleReopen}
+              disabled={completing}
+              className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {completing ? 'Reopening…' : 'Reopen year'}
             </button>
           )}
         </div>
