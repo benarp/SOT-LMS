@@ -14,6 +14,7 @@ type HomeworkItem = {
   sort_order: number
   completed: boolean
   response: string | null
+  show_attribution?: boolean
 }
 
 const bookIcon = (
@@ -181,6 +182,14 @@ export default function HomeworkFeed({
                   >
                     Watch video →
                   </a>
+                )}
+                {item.type === 'video' && item.show_attribution !== false && !done && (
+                  <p className="mt-2 text-xs text-gray-400">
+                    Video provided by BibleProject — explore all their content at{' '}
+                    <a href="https://bibleproject.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">
+                      bibleproject.com
+                    </a>
+                  </p>
                 )}
 
                 {/* Reading plan day-by-day */}

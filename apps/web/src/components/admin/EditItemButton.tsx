@@ -11,6 +11,7 @@ type Item = {
   description: string | null
   external_url: string | null
   content: string | null
+  show_attribution?: boolean
 }
 
 export default function EditItemButton({ item }: { item: Item }) {
@@ -96,16 +97,23 @@ export default function EditItemButton({ item }: { item: Item }) {
       )}
 
       {showUrl && (
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Video URL</label>
-          <input
-            name="externalUrl"
-            type="url"
-            defaultValue={item.external_url ?? ''}
-            placeholder="https://youtube.com/watch?v=..."
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-          />
-        </div>
+        <>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Video URL</label>
+            <input
+              name="externalUrl"
+              type="url"
+              defaultValue={item.external_url ?? ''}
+              placeholder="https://youtube.com/watch?v=..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+          <input type="hidden" name="hasAttributionField" value="1" />
+          <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+            <input type="checkbox" name="showAttribution" defaultChecked={item.show_attribution !== false} className="mt-0.5 rounded border-gray-300" />
+            <span>Show BibleProject attribution under the video</span>
+          </label>
+        </>
       )}
 
       {error && <p className="text-xs text-red-600">{error}</p>}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator,
   TouchableOpacity, Alert, Dimensions, TextInput,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
@@ -25,6 +25,7 @@ type Item = {
   week_id: string
   completed: boolean
   due_date: string
+  show_attribution?: boolean
 }
 
 function getEmbedUrl(rawUrl: string): string | null {
@@ -71,7 +72,7 @@ export default function ItemDetailScreen() {
 
       const { data: itemData } = await supabase
         .from('homework_items')
-        .select('id, type, title, description, content, external_url, book_id, week_id')
+        .select('id, type, title, description, content, external_url, book_id, week_id, show_attribution')
         .eq('id', itemId)
         .single()
 
@@ -219,6 +220,14 @@ export default function ItemDetailScreen() {
             />
           </View>
         )}
+        {item.type === 'video' && item.show_attribution !== false && (
+          <Text style={styles.attribution}>
+            Video provided by BibleProject — explore all their content at{' '}
+            <Text style={styles.attributionLink} onPress={() => Linking.openURL('https://bibleproject.com')}>
+              bibleproject.com
+            </Text>
+          </Text>
+        )}
 
         {/* Reading plan day-by-day */}
         {(item.type === 'bible_reading' || item.type === 'book_reading') && days.length > 0 && (
@@ -329,9 +338,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     marginTop: 8,
-    marginBottom: 24,
+    marginBottom: 10,
     backgroundColor: '#000',
   },
+  attribution: { fontSize: 12, color: '#9ca3af', lineHeight: 17, marginBottom: 16 },
+  attributionLink: { color: '#3b82f6', textDecorationLine: 'underline' },
   daysContainer: {
     marginTop: 16,
     backgroundColor: '#fff',

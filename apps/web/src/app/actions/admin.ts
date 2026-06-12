@@ -59,6 +59,7 @@ export async function addHomeworkItem(formData: FormData): Promise<{ error?: str
     content: content || null,
     book_id: bookId || null,
     sort_order: sortOrder,
+    show_attribution: formData.get('showAttribution') === 'on',
   })
 
   if (error) return { error: error.message }
@@ -75,12 +76,19 @@ export async function updateHomeworkItem(formData: FormData): Promise<{ error?: 
   const externalUrl = ((formData.get('externalUrl') as string) || '').trim()
   const content = formData.get('content') as string
 
-  const { error } = await supabase.from('homework_items').update({
+  const updates: Record<string, unknown> = {
     title,
     description: description || null,
     external_url: externalUrl || null,
     content: content || null,
-  }).eq('id', itemId)
+  }
+  // Only video edit forms render the attribution checkbox — don't clobber
+  // the flag when other item types are edited
+  if (formData.get('hasAttributionField')) {
+    updates.show_attribution = formData.get('showAttribution') === 'on'
+  }
+
+  const { error } = await supabase.from('homework_items').update(updates).eq('id', itemId)
 
   if (error) return { error: error.message }
   revalidatePath(`/admin/curriculum/${weekId}`)

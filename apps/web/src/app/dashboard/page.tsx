@@ -45,7 +45,7 @@ export default async function DashboardPage() {
   // Get homework items for this week
   const { data: items } = await supabase
     .from('homework_items')
-    .select('id, type, title, description, external_url, content, book_id, sort_order')
+    .select('id, type, title, description, external_url, content, book_id, sort_order, show_attribution')
     .eq('week_id', currentWeek.id)
     .order('sort_order', { ascending: true })
 

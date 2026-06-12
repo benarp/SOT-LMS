@@ -88,10 +88,16 @@ export default function AddHomeworkItemForm({ weekId, books, nextSortOrder }: { 
       )}
 
       {type === 'video' && (
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Video URL</label>
-          <input name="externalUrl" type="url" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
-        </div>
+        <>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Video URL</label>
+            <input name="externalUrl" type="url" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+          </div>
+          <label className="flex items-start gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" name="showAttribution" defaultChecked className="mt-0.5 rounded border-gray-300" />
+            <span>Show BibleProject attribution under the video (&quot;Video provided by BibleProject&quot; with a link to their site)</span>
+          </label>
+        </>
       )}
 
       {type === 'reflection' && (

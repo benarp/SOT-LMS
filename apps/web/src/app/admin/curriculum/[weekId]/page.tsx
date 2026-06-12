@@ -28,7 +28,7 @@ export default async function WeekEditPage({ params }: { params: Promise<{ weekI
 
   const { data: items } = await supabase
     .from('homework_items')
-    .select('id, type, title, description, external_url, content, sort_order')
+    .select('id, type, title, description, external_url, content, sort_order, show_attribution')
     .eq('week_id', weekId)
     .order('sort_order', { ascending: true })
 
