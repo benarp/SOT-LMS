@@ -26,6 +26,12 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
+  // API routes authenticate themselves (cron bearer token, Stripe signature)
+  // — a login redirect would break Vercel cron and Stripe webhooks
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
   // Public routes — no auth required
   const isPublicRoute =
     pathname === '/login' ||
