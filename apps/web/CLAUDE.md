@@ -106,3 +106,16 @@ npm run dev
 - New users default to `student` role — admin must manually update role in SQL or future admin UI
 - Email invite rate limit can be hit during testing; manually set passwords via Supabase dashboard → Authentication → Users → Edit user
 - Always use `public.` prefix in trigger/function bodies to avoid schema resolution issues
+
+## Portability / migrating off Supabase
+The app is designed to be portable. Lock-in surface is small:
+
+**What's fully portable**
+- `supabase/schema.sql` — plain PostgreSQL DDL; runs on any Postgres host (Neon, self-hosted, etc.)
+- All app data — standard `pg_dump` captures everything in `public.*`
+- RLS policies — standard PostgreSQL syntax
+
+**Supabase-specific things that need replacement**
+- `auth.users` table — managed by Supabase, outside the public schema. Export with `supabase/export-auth-users.sql` (bcrypt hashes are portable)
+- `auth.uid()` — used in 5 RLS policies in `schema.sql`. On a non-Supabase stack, replace with `current_setting('app.current_user_id', true)::uuid` and set that variable in your auth middleware at session start
+- `@supabase/supabase-js` client — used throughout for both DB queries and auth; swap for `postgres.js` + Auth.js (or Lucia) on another stack
