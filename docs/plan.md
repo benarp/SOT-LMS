@@ -132,20 +132,29 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 ### 1. Stripe Go-Live (manual setup)
 The Stripe billing code is fully built (July 2026). Before the first real charge, one-time setup:
 
-1. Create the Stripe account for All Peoples Church / SOT and grab API keys
+> **⚠️ Current keys are from a personal/test Stripe account** (July 2026, for development
+> only). Before go-live, create the real Stripe account for All Peoples Church / SOT and
+> replace `STRIPE_SECRET_KEY` **and** `STRIPE_WEBHOOK_SECRET` everywhere they're set —
+> the webhook endpoint must be re-created under the new account too (signing secrets are
+> per-account, so the old one will silently fail signature verification).
+
+1. Create the Stripe account for All Peoples Church / SOT and grab live API keys
 2. Set env vars in Vercel **and** `.env.local`:
    ```
    STRIPE_SECRET_KEY=sk_live_...
    STRIPE_WEBHOOK_SECRET=whsec_...
    BILLING_ALERT_EMAILS=barp@allpeopleschurch.org,<finance person>
    ```
-3. In the Stripe dashboard, add a webhook endpoint pointing to
+3. In the Stripe dashboard (the real account), add a webhook endpoint pointing to
    `https://<production-domain>/api/stripe/webhook` with events:
    `checkout.session.completed`, `invoice.payment_succeeded`,
    `invoice.payment_failed`, `customer.subscription.deleted`,
    `customer.subscription.updated` — copy its signing secret into `STRIPE_WEBHOOK_SECRET`
 4. Configure Stripe dunning/retry settings (Settings → Billing → Revenue recovery)
 5. Test end-to-end with test keys + Stripe test cards before switching to live keys
+6. Any Stripe customers/subscriptions created under the test account won't exist in the
+   real account — if real students set up payment during testing, their `billing_accounts`
+   rows must be cleared so they can re-run checkout under the new account
 
 Deposit refund policy: admin's discretion, via the Refund button on the student's billing panel.
 
