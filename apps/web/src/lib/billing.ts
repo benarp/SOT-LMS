@@ -5,7 +5,11 @@ import Stripe from 'stripe'
 export const DEPOSIT_CENTS = 40000
 export const MONTHLY_CENTS = 20000
 export const TOTAL_CYCLES = 10
-export const TRIAL_DAYS = 30 // gap between deposit and first monthly charge
+export const TOTAL_TUITION_CENTS = DEPOSIT_CENTS + MONTHLY_CENTS * TOTAL_CYCLES
+// Gap between the deposit and the first monthly charge. Implemented as a
+// billing_cycle_anchor (not a Stripe trial) so Checkout doesn't render
+// "free trial" language.
+export const FIRST_MONTHLY_DELAY_DAYS = 30
 
 export const BILLING_STATUS_LABELS: Record<string, string> = {
   pending: 'Not started',
@@ -55,4 +59,40 @@ export function outstandingCents(account: {
   if (account.status === 'pending' || account.status === 'cancelled') return 0
   const expected = expectedCycles(account.monthly_starts_at)
   return Math.max(0, (expected - account.cycles_paid) * MONTHLY_CENTS)
+}
+
+function addMonths(iso: string, months: number): Date {
+  const d = new Date(iso)
+  d.setMonth(d.getMonth() + months)
+  return d
+}
+
+/**
+ * Date of the student's next scheduled $200 charge, or null if there isn't
+ * one (all cycles paid, or the account isn't in a billing state). Derived
+ * from the anchor date + how many cycles have been paid.
+ */
+export function nextPaymentDate(account: {
+  status: string
+  monthly_starts_at: string | null
+  cycles_paid: number
+}): Date | null {
+  if (!account.monthly_starts_at) return null
+  if (account.status !== 'active' && account.status !== 'overdue') return null
+  if (account.cycles_paid >= TOTAL_CYCLES) return null
+  return addMonths(account.monthly_starts_at, account.cycles_paid)
+}
+
+/** Date of the final ($200 × 10th) payment for this account. */
+export function finalPaymentDate(monthlyStartsAt: string | null): Date | null {
+  if (!monthlyStartsAt) return null
+  return addMonths(monthlyStartsAt, TOTAL_CYCLES - 1)
+}
+
+/** How much of the $2,400 year is still to be collected, after credits. */
+export function remainingCents(account: {
+  total_collected_cents: number
+  credits_applied_cents: number
+}): number {
+  return Math.max(0, TOTAL_TUITION_CENTS - account.total_collected_cents - account.credits_applied_cents)
 }

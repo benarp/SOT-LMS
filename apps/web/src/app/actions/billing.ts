@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getStripe, DEPOSIT_CENTS, MONTHLY_CENTS, TRIAL_DAYS } from '@/lib/billing'
+import { getStripe, DEPOSIT_CENTS, MONTHLY_CENTS, TOTAL_CYCLES } from '@/lib/billing'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
 
@@ -66,19 +66,13 @@ export async function startCheckout(): Promise<{ error?: string } | never> {
   }
   if (account.status !== 'pending') return { error: 'Payment is already set up.' }
 
+  // Checkout collects only the deposit and saves the card. The $200 x 10
+  // subscription is created by the webhook afterwards — keeping Stripe's
+  // trial/"per month until you cancel" language off the checkout page.
   const session = await getStripe().checkout.sessions.create({
-    mode: 'subscription',
+    mode: 'payment',
     customer: account.stripe_customer_id,
     line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          product_data: { name: `SOT Tuition ${year.name} — monthly` },
-          unit_amount: MONTHLY_CENTS,
-          recurring: { interval: 'month' },
-        },
-        quantity: 1,
-      },
       {
         price_data: {
           currency: 'usd',
@@ -88,9 +82,18 @@ export async function startCheckout(): Promise<{ error?: string } | never> {
         quantity: 1,
       },
     ],
-    subscription_data: {
-      trial_period_days: TRIAL_DAYS,
-      metadata: { student_id: user.id, school_year_id: year.id },
+    payment_intent_data: {
+      setup_future_usage: 'off_session',
+    },
+    metadata: { sot_purpose: 'tuition_deposit', student_id: user.id, school_year_id: year.id, year_name: year.name },
+    custom_text: {
+      submit: {
+        message:
+          `Today you pay the $${DEPOSIT_CENTS / 100} deposit. Your card will then be charged ` +
+          `${TOTAL_CYCLES} monthly payments of $${MONTHLY_CENTS / 100}, starting in about a month — ` +
+          `$${(DEPOSIT_CENTS + MONTHLY_CENTS * TOTAL_CYCLES) / 100} total for the year. ` +
+          `Payments stop automatically after the ${TOTAL_CYCLES}th monthly payment.`,
+      },
     },
     success_url: `${SITE_URL}/dashboard/billing?setup=success`,
     cancel_url: `${SITE_URL}/dashboard/billing?setup=cancelled`,

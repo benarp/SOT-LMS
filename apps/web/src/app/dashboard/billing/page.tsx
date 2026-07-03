@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation'
 import { StartCheckoutButton, UpdateCardButton } from '@/components/BillingActions'
 import {
   BILLING_STATUS_LABELS, DEPOSIT_CENTS, MONTHLY_CENTS, TOTAL_CYCLES,
-  formatCents, outstandingCents,
+  formatCents, outstandingCents, nextPaymentDate, finalPaymentDate, remainingCents,
 } from '@/lib/billing'
+
+const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600',
@@ -26,13 +28,16 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
   const { data: account } = year ? await supabase
     .from('billing_accounts')
-    .select('status, deposit_paid, cycles_paid, total_collected_cents, monthly_starts_at')
+    .select('status, deposit_paid, cycles_paid, total_collected_cents, credits_applied_cents, monthly_starts_at')
     .eq('student_id', user.id)
     .eq('school_year_id', year.id)
     .maybeSingle() : { data: null }
 
   const status = account?.status ?? 'pending'
   const owed = account ? outstandingCents(account) : 0
+  const nextPayment = account ? nextPaymentDate(account) : null
+  const finalPayment = account ? finalPaymentDate(account.monthly_starts_at) : null
+  const remaining = account ? remainingCents(account) : 0
 
   return (
     <div className="max-w-2xl">
@@ -79,12 +84,30 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-400">Monthly payments</dt>
-                <dd className="text-gray-900">{account?.cycles_paid ?? 0} of {TOTAL_CYCLES} paid</dd>
+                <dd className="text-gray-900">{account?.cycles_paid ?? 0} of {TOTAL_CYCLES} paid ({formatCents(MONTHLY_CENTS)} each)</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-400">Total paid</dt>
                 <dd className="text-gray-900">{formatCents(account?.total_collected_cents ?? 0)}</dd>
               </div>
+              {remaining > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Remaining this year</dt>
+                  <dd className="text-gray-900">{formatCents(remaining)}</dd>
+                </div>
+              )}
+              {nextPayment && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Next payment</dt>
+                  <dd className="text-gray-900">{formatCents(MONTHLY_CENTS)} on {fmtDate(nextPayment)}</dd>
+                </div>
+              )}
+              {finalPayment && status !== 'completed' && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Final payment</dt>
+                  <dd className="text-gray-900">{fmtDate(finalPayment)}</dd>
+                </div>
+              )}
               {owed > 0 && (
                 <div className="flex justify-between">
                   <dt className="text-gray-400">Balance due</dt>
@@ -92,6 +115,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 </div>
               )}
             </dl>
+            {status === 'paused' && (
+              <p className="text-sm text-amber-600 mb-4">
+                Your payments are paused. Contact the school office about resuming.
+              </p>
+            )}
             {status === 'overdue' && (
               <p className="text-sm text-red-600 mb-4">
                 Your last payment didn&apos;t go through. Please update your card below — Stripe will retry automatically.
