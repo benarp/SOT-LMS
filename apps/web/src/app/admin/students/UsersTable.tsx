@@ -136,9 +136,12 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
   function PaymentBadge({ status }: { status: string | null }) {
     if (!status) return <span className="text-gray-300">—</span>
     const colors: Record<string, string> = {
-      Current: 'bg-green-50 text-green-700',
-      Paused: 'bg-yellow-50 text-yellow-700',
-      Overdue: 'bg-red-50 text-red-700',
+      'Active': 'bg-green-50 text-green-700',
+      'Paid in full': 'bg-green-50 text-green-700',
+      'Paused': 'bg-yellow-50 text-yellow-700',
+      'Overdue': 'bg-red-50 text-red-700',
+      'Not started': 'bg-gray-100 text-gray-600',
+      'Cancelled': 'bg-gray-100 text-gray-500',
     }
     return (
       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] ?? 'bg-gray-100 text-gray-600'}`}>

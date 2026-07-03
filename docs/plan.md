@@ -49,16 +49,15 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 
 ### Student Dashboard
 - **This Week** — current homework with progress bar, mark complete/incomplete
-- **History** — past weeks with completion badges, read-only item view
-- **Book Reflections** — write and save reflections per book; saving auto-marks matching homework item complete
+- **History** — past weeks are fully interactive: students can complete missed items and submit/edit reflections late (marked "Submitted late")
+- **Tuition** — payment status, Stripe Checkout setup, update card on file
 - **Announcements** — active announcements appear at top of dashboard
 
 ### Homework Item Types
 - `Scripture Reading` — day-by-day reading list
 - `Book Reading` — day-by-day reading plan
 - `Video` — embedded YouTube/Vimeo player; optional BibleProject attribution; falls back to external link for non-embeddable URLs
-- `Book Reflection` — links to the matching book in the Reflections tab
-- `Reflection` — typed response prompt; saving the response completes the item
+- `Reflection` — typed response prompt; saving the response completes the item. Book reflections are just reflection items in the curriculum (the standalone Book Reflections feature was removed July 2026)
 
 ### Announcements & Weekly Email
 - Admin creates announcements with title, body, and scheduled publish date
@@ -95,12 +94,22 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - Full user management table: sortable/filterable, CSV export
 - Per-student detail page: edit name/email, change role, assign group, deactivate/reactivate, send password setup/reset email
 - **Impersonation** — view the app as any student for support; persistent banner while active; start/end recorded in `audit_log`
-- Audit log records: impersonation, role changes, deactivations, invites, profile edits
-- Payment status column wired (currently shows `—`; will populate when Stripe is built)
+- Audit log records: impersonation, role changes, deactivations, invites, profile edits, billing actions
+- Payment status column shows live billing status per student
+
+### Admin — Billing & Finances (Stripe)
+- Stripe Checkout: $400 deposit at signup + $200/month × 10 subscription (30-day trial gap); webhook auto-cancels after cycle 10
+- Per-student billing panel: pause, resume, apply credit/scholarship (with required note), cancel, refund (full or partial, per charge), payment history
+- Students can only update their card (restricted Stripe billing portal) — no self-service cancel
+- `/admin/finances`: summary cards (collected, outstanding, active, needs-attention), student-level table, CSV export
+- Outstanding balance is derived (expected cycles vs. paid), so paused/failed months are always accurate
+- Payment-failure emails to `BILLING_ALERT_EMAILS`
+- Acceptance email links straight to the tuition setup page
 
 ### Admin — Reports
 - Completion rates by week, student, and group
 - Late submission tracking
+- Per-week detail table (`/admin/reports/[weekId]`): student × item grid with reflection answers inline, Cmd+F-friendly
 
 ### Group Leader View
 - Scoped to their assigned group only
@@ -110,9 +119,8 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 ### Mobile App (Expo)
 - Login screen
 - This Week — homework checklist with announcements
-- Item detail — embedded YouTube/Vimeo player, day-by-day reading, book reflection link
+- Item detail — embedded YouTube/Vimeo player, day-by-day reading, reflection response box
 - History — past weeks with completion state
-- Book Reflections — write and save; auto-marks matching homework item complete
 - Account settings
 - EAS build profiles configured for cloud dev builds
 - Fixed: YouTube embed errors 153/154 in WebView; non-embeddable URLs open externally
@@ -121,57 +129,25 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 
 ## What's Next
 
-### 1. Stripe Billing (highest priority)
-Required before the first paid cohort. Full spec: [`docs/billing-spec.md`](./billing-spec.md)
+### 1. Stripe Go-Live (manual setup)
+The Stripe billing code is fully built (July 2026). Before the first real charge, one-time setup:
 
-**Pricing model**
-- $400 deposit charged immediately on acceptance
-- $200/month × 10 months ($2,000 remaining tuition)
-- $2,400 total per student per school year
+1. Create the Stripe account for All Peoples Church / SOT and grab API keys
+2. Set env vars in Vercel **and** `.env.local`:
+   ```
+   STRIPE_SECRET_KEY=sk_live_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   BILLING_ALERT_EMAILS=barp@allpeopleschurch.org,<finance person>
+   ```
+3. In the Stripe dashboard, add a webhook endpoint pointing to
+   `https://<production-domain>/api/stripe/webhook` with events:
+   `checkout.session.completed`, `invoice.payment_succeeded`,
+   `invoice.payment_failed`, `customer.subscription.deleted`,
+   `customer.subscription.updated` — copy its signing secret into `STRIPE_WEBHOOK_SECRET`
+4. Configure Stripe dunning/retry settings (Settings → Billing → Revenue recovery)
+5. Test end-to-end with test keys + Stripe test cards before switching to live keys
 
-**Student experience**
-- Acceptance email includes a link to a payment setup page
-- Student enters card → $400 charged immediately → subscription begins
-- Payment status visible on student dashboard
-
-**Admin operations** (from student detail page)
-- View status: active, paused, overdue, cancelled
-- View next charge date, full payment history, outstanding balance
-- **Pause** — suspends subscription; tracks outstanding balance
-- **Resume** — reactivates subscription; admin chooses whether to adjust for missed payments
-- **Apply credit/scholarship** — applies dollar amount as Stripe customer balance credit; includes notes field
-- **Cancel** — ends future billing; does not auto-refund
-- **Refund** — refund a specific charge (partial or full)
-
-**Financial reporting** (new `/admin/finances` section)
-- Summary cards: total collected, active/paused/cancelled/overdue subscriptions, outstanding balance, credits applied
-- Student-level billing table with CSV export
-
-**Database additions needed**
-- `billing_accounts` — one per student per school year; Stripe customer ID, subscription ID, status, outstanding balance
-- `billing_events` — log of all charges, refunds, credits
-
-**Stripe objects**
-- Customer, Payment Method, Payment Intent (deposit), Subscription, Invoice, Customer Balance, Refund
-
-**Webhook events to handle**
-- `invoice.payment_succeeded`
-- `invoice.payment_failed`
-- `customer.subscription.deleted`
-- `customer.subscription.updated`
-
-**Environment variables needed**
-```
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-```
-
-**Open questions before building**
-- Stripe-hosted payment page (Payment Links) vs. embedded in the platform?
-- What happens to billing if a student defers to the next school year?
-- Is the $400 deposit refundable if an accepted student declines? Under what conditions?
-- Who else besides Ben should receive payment failure notifications?
+Deposit refund policy: admin's discretion, via the Refund button on the student's billing panel.
 
 ---
 
@@ -219,16 +195,6 @@ Not started. Would notify students when new homework is posted or an announcemen
 
 ---
 
-### 6. File Uploads for Book Reflections
-Schema supports `file_url` on `book_reflections`. Upload UI not built.
-
-**Scope:**
-- Students can attach a file (PDF, image) alongside or instead of a typed reflection
-- Upload to Supabase Storage
-- Admin can view uploaded files from the student detail page
-
----
-
 ## Database Schema Summary
 
 | Table | Purpose |
@@ -236,16 +202,14 @@ Schema supports `file_url` on `book_reflections`. Upload UI not built.
 | `profiles` | Extends Supabase auth; role, name, group assignment, unsubscribe token |
 | `school_years` | One active at a time; has application window dates and completion state |
 | `groups` | Small groups, each with a leader |
-| `books` | Books assigned for the year |
 | `weeks` | Numbered weeks per school year, each with a `due_date` |
 | `homework_items` | Assignments per week (type, title, content, URL, sort order) |
 | `submissions` | Completion records (student × homework item); has `is_late` flag and `response_text` for Reflection type |
-| `book_reflections` | Written reflections per student per book; supports `file_url` |
 | `announcements` | Admin-published; `publish_at` supports scheduling; `target_group_id` null = all students |
 | `applications` | One per applicant per school year; stores all essay answers |
 | `pastoral_references` | One per application; token, pastor answers, completion status |
 | `application_settings` | Per-school-year question prompts and agreement text |
 | `email_log` | Records each weekly email send to prevent accidental duplicates |
 | `audit_log` | Records admin actions: impersonation, role changes, deactivation, invites, profile edits |
-| `billing_accounts` | *(pending)* One per student per school year; Stripe IDs and billing status |
-| `billing_events` | *(pending)* Log of all charges, refunds, and credits |
+| `billing_accounts` | One per student per school year; Stripe customer/subscription IDs, status, cycles paid, totals |
+| `billing_events` | Audit trail of every charge, failure, pause/resume, credit, and refund |

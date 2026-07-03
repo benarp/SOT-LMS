@@ -50,10 +50,6 @@ alter table profiles add constraint profiles_group_id_fkey
   foreign key (group_id) references groups on delete set null;
 
 -- ─────────────────────────────────────────
--- BOOKS
--- ─────────────────────────────────────────
-
--- ─────────────────────────────────────────
 -- WEEKS
 -- ─────────────────────────────────────────
 
@@ -191,3 +187,53 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure handle_new_user();
+
+-- ─────────────────────────────────────────
+-- BILLING (Stripe) — see migration-billing.sql
+-- ─────────────────────────────────────────
+
+create table billing_accounts (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references profiles on delete cascade,
+  school_year_id uuid not null references school_years on delete cascade,
+  stripe_customer_id text not null,
+  stripe_subscription_id text,
+  status text not null default 'pending'
+    check (status in ('pending', 'active', 'paused', 'overdue', 'cancelled', 'completed')),
+  deposit_paid boolean not null default false,
+  cycles_paid int not null default 0,
+  total_collected_cents int not null default 0,
+  credits_applied_cents int not null default 0,
+  monthly_starts_at timestamptz,
+  paused_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (student_id, school_year_id)
+);
+
+create table billing_events (
+  id uuid primary key default gen_random_uuid(),
+  billing_account_id uuid not null references billing_accounts on delete cascade,
+  type text not null,
+  amount_cents int,
+  stripe_object_id text,
+  notes text,
+  created_by uuid references profiles,
+  created_at timestamptz not null default now()
+);
+
+create index billing_events_account_idx on billing_events (billing_account_id, created_at desc);
+
+alter table billing_accounts enable row level security;
+alter table billing_events enable row level security;
+
+create policy "billing_accounts: own" on billing_accounts
+  for select using (student_id = auth.uid());
+create policy "billing_accounts: admin all" on billing_accounts
+  for all using (current_user_role() = 'admin');
+create policy "billing_events: own" on billing_events
+  for select using (
+    billing_account_id in (select id from billing_accounts where student_id = auth.uid())
+  );
+create policy "billing_events: admin all" on billing_events
+  for all using (current_user_role() = 'admin');

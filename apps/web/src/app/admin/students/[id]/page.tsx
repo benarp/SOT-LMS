@@ -7,6 +7,8 @@ import RoleSelect from './RoleSelect'
 import AccountActions from './AccountActions'
 import GroupAssignSelect from '@/components/admin/GroupAssignSelect'
 import ImpersonateButton from '@/components/admin/ImpersonateButton'
+import BillingPanel from './BillingPanel'
+import { outstandingCents } from '@/lib/billing'
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -51,6 +53,24 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const { data: alumniYear } = profile.alumni_year_id
     ? await admin.from('school_years').select('name').eq('id', profile.alumni_year_id).single()
     : { data: null }
+
+  // Billing for the active year
+  const { data: billingAccount } = schoolYear
+    ? await admin
+        .from('billing_accounts')
+        .select('id, status, deposit_paid, cycles_paid, total_collected_cents, credits_applied_cents, monthly_starts_at')
+        .eq('student_id', id)
+        .eq('school_year_id', schoolYear.id)
+        .maybeSingle()
+    : { data: null }
+
+  const { data: billingEvents } = billingAccount
+    ? await admin
+        .from('billing_events')
+        .select('id, type, amount_cents, stripe_object_id, notes, created_at')
+        .eq('billing_account_id', billingAccount.id)
+        .order('created_at', { ascending: false })
+    : { data: [] }
 
   return (
     <div className="max-w-4xl">
@@ -126,6 +146,18 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               hasSignedIn={!!lastSignIn}
             />
           </section>
+
+          {profile.role === 'student' && (
+            <section>
+              <h2 className="text-sm font-medium text-gray-700 mb-3">
+                Billing — {schoolYear?.name ?? 'no active year'}
+              </h2>
+              <BillingPanel
+                account={billingAccount ? { ...billingAccount, outstanding_cents: outstandingCents(billingAccount) } : null}
+                events={billingEvents ?? []}
+              />
+            </section>
+          )}
         </div>
 
         <section>

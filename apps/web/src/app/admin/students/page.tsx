@@ -4,6 +4,7 @@ import InviteStudentForm from '@/components/admin/InviteStudentForm'
 import AddGroupForm from '@/components/admin/AddGroupForm'
 import GroupAssignSelect from '@/components/admin/GroupAssignSelect'
 import UsersTable, { type UserRow } from './UsersTable'
+import { BILLING_STATUS_LABELS } from '@/lib/billing'
 
 function splitName(full: string | null): { firstName: string; lastName: string } {
   if (!full) return { firstName: '', lastName: '' }
@@ -47,6 +48,17 @@ export default async function UsersPage() {
   ])
 
   const currentWeek = currentWeekResult.data as { id: string; due_date: string } | null
+
+  // Billing status per student for the active year
+  const { data: billingAccounts } = schoolYear
+    ? await admin
+        .from('billing_accounts')
+        .select('student_id, status')
+        .eq('school_year_id', schoolYear.id)
+    : { data: [] }
+  const billingStatusByStudent = new Map(
+    (billingAccounts ?? []).map(b => [b.student_id, BILLING_STATUS_LABELS[b.status] ?? b.status])
+  )
 
   // Build phone/city lookup keyed by profile id
   const contactByProfile: Record<string, { phone: string | null; city: string | null }> = {}
@@ -103,7 +115,7 @@ export default async function UsersPage() {
       city: contact.city,
       role: p.role,
       alumniYear: p.alumni_year_id ? yearNameById.get(p.alumni_year_id) ?? null : null,
-      paymentStatus: null, // Stripe billing not yet implemented
+      paymentStatus: p.role === 'student' ? (billingStatusByStudent.get(p.id) ?? 'Not started') : null,
       homeworkStatus: homeworkStatusMap[p.id] ?? null,
     }
   })
