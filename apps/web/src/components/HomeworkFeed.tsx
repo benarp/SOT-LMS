@@ -10,7 +10,6 @@ type HomeworkItem = {
   description: string | null
   external_url: string | null
   content: string | null
-  book_id: string | null
   sort_order: number
   completed: boolean
   response: string | null
@@ -41,10 +40,7 @@ const typeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
-  book_reflection: { label: 'Reflection', icon: reflectionIcon },
   reflection: { label: 'Reflection', icon: reflectionIcon },
-  // legacy value, in case the type migration hasn't run yet
-  written: { label: 'Reflection', icon: reflectionIcon },
 }
 
 function getEmbedUrl(rawUrl: string): string | null {
@@ -67,7 +63,7 @@ function getEmbedUrl(rawUrl: string): string | null {
   }
 }
 
-const isReflectionType = (type: string) => type === 'reflection' || type === 'written'
+const isReflectionType = (type: string) => type === 'reflection'
 const isReadingType = (type: string) => type === 'bible_reading' || type === 'book_reading'
 
 export default function HomeworkFeed({
@@ -130,7 +126,7 @@ export default function HomeworkFeed({
     <div className="space-y-3">
       {items.map(item => {
         const done = optimistic[item.id]
-        const config = typeConfig[item.type] ?? typeConfig.written
+        const config = typeConfig[item.type] ?? typeConfig.reflection
         const embedUrl = item.type === 'video' && item.external_url ? getEmbedUrl(item.external_url) : null
         const days = isReadingType(item.type) && item.content
           ? item.content.split('\n').filter(l => l.trim().length > 0)
@@ -141,7 +137,7 @@ export default function HomeworkFeed({
           <div
             key={item.id}
             className={`bg-white border rounded-xl p-4 transition-all ${
-              done ? 'border-gray-100 opacity-60' : 'border-gray-200'
+              done ? `border-gray-100${reflection ? '' : ' opacity-60'}` : 'border-gray-200'
             }`}
           >
             <div className="flex items-start gap-4">

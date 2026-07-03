@@ -9,7 +9,6 @@ import { useLocalSearchParams } from 'expo-router'
 import { WebView } from 'react-native-webview'
 import { supabase } from '../../lib/supabase'
 import { adjustOpenCount } from '../../lib/openAssignments'
-import ReflectionEditor from '../../components/ReflectionEditor'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const VIDEO_HEIGHT = Math.round((SCREEN_WIDTH - 32) * 9 / 16)
@@ -21,7 +20,6 @@ type Item = {
   description: string | null
   content: string | null
   external_url: string | null
-  book_id: string | null
   week_id: string
   completed: boolean
   due_date: string
@@ -58,9 +56,6 @@ export default function ItemDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(false)
   const [userId, setUserId] = useState('')
-  const [book, setBook] = useState<{ id: string; title: string } | null>(null)
-  const [reflection, setReflection] = useState<{ id: string; content: string } | null>(null)
-  const [editorOpen, setEditorOpen] = useState(false)
   const [responseDraft, setResponseDraft] = useState('')
   const [savingResponse, setSavingResponse] = useState(false)
 
@@ -72,7 +67,7 @@ export default function ItemDetailScreen() {
 
       const { data: itemData } = await supabase
         .from('homework_items')
-        .select('id, type, title, description, content, external_url, book_id, week_id, show_attribution')
+        .select('id, type, title, description, content, external_url, week_id, show_attribution')
         .eq('id', itemId)
         .single()
 
@@ -92,21 +87,6 @@ export default function ItemDetailScreen() {
         .single()
 
       if (sub?.response_text) setResponseDraft(sub.response_text)
-
-      // For book reflections, load the book and any existing reflection
-      // so the editor opens right here instead of a separate tab
-      if (itemData.type === 'book_reflection' && itemData.book_id) {
-        const [{ data: bookData }, { data: refData }] = await Promise.all([
-          supabase.from('books').select('id, title').eq('id', itemData.book_id).single(),
-          supabase.from('book_reflections')
-            .select('id, content')
-            .eq('student_id', user.id)
-            .eq('book_id', itemData.book_id)
-            .maybeSingle(),
-        ])
-        setBook(bookData)
-        setReflection(refData ? { id: refData.id, content: refData.content ?? '' } : null)
-      }
 
       setItem({ ...itemData, completed: !!sub, due_date: week?.due_date ?? '' })
       setLoading(false)
@@ -133,13 +113,6 @@ export default function ItemDetailScreen() {
     setItem(prev => prev ? { ...prev, completed: true } : prev)
     adjustOpenCount(-1)
     setCompleting(false)
-  }
-
-  function handleReflectionSaved(content: string, reflectionId: string) {
-    setReflection({ id: reflectionId, content })
-    if (item && !item.completed) adjustOpenCount(-1)
-    setItem(prev => prev ? { ...prev, completed: true } : prev)
-    setEditorOpen(false)
   }
 
   async function saveResponse() {
@@ -193,7 +166,7 @@ export default function ItemDetailScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.typeLabel}>{
-          { bible_reading: 'Scripture Reading', book_reading: 'Book Reading', video: 'Video', book_reflection: 'Reflection', reflection: 'Reflection', written: 'Reflection' }[item.type] ?? item.type
+          { bible_reading: 'Scripture Reading', book_reading: 'Book Reading', video: 'Video', reflection: 'Reflection' }[item.type] ?? item.type
         }</Text>
         <Text style={styles.title}>{item.title}</Text>
         {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
@@ -241,28 +214,8 @@ export default function ItemDetailScreen() {
           </View>
         )}
 
-        {/* Book reflection — written and saved right here */}
-        {item.type === 'book_reflection' && (
-          <>
-            {reflection?.content ? (
-              <View style={styles.reflectionPreview}>
-                <Text style={styles.reflectionPreviewLabel}>Your reflection</Text>
-                <Text style={styles.reflectionPreviewText} numberOfLines={6}>{reflection.content}</Text>
-              </View>
-            ) : null}
-            <TouchableOpacity style={styles.reflectionCta} onPress={() => setEditorOpen(true)} activeOpacity={0.8}>
-              <Text style={styles.reflectionCtaText}>
-                {reflection ? 'Edit your reflection' : 'Write your reflection →'}
-              </Text>
-            </TouchableOpacity>
-            {item.completed && (
-              <Text style={styles.reflectionDone}>✓ Reflection submitted — homework item complete</Text>
-            )}
-          </>
-        )}
-
         {/* Reflection: prompt + response box */}
-        {(item.type === 'reflection' || item.type === 'written') && (
+        {item.type === 'reflection' && (
           <>
             {item.content ? (
               <View style={styles.writtenBox}>
@@ -296,7 +249,7 @@ export default function ItemDetailScreen() {
         )}
 
         {/* Complete button (reflections complete by saving a response) */}
-        {item.type !== 'book_reflection' && item.type !== 'reflection' && item.type !== 'written' && (
+        {item.type !== 'reflection' && (
           <TouchableOpacity
             style={[styles.completeBtn, item.completed && styles.completeBtnDone, completing && styles.completeBtnDisabled]}
             onPress={markComplete}
@@ -311,18 +264,6 @@ export default function ItemDetailScreen() {
         )}
       </ScrollView>
       </KeyboardAvoidingView>
-
-      {book && (
-        <ReflectionEditor
-          visible={editorOpen}
-          book={book}
-          userId={userId}
-          initialContent={reflection?.content ?? ''}
-          existingReflectionId={reflection?.id ?? null}
-          onSaved={handleReflectionSaved}
-          onClose={() => setEditorOpen(false)}
-        />
-      )}
     </SafeAreaView>
   )
 }
@@ -355,24 +296,6 @@ const styles = StyleSheet.create({
   dayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   dayDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#111827', marginTop: 6, flexShrink: 0 },
   dayText: { fontSize: 14, color: '#374151', lineHeight: 22, flex: 1 },
-  reflectionCta: {
-    backgroundColor: '#111827',
-    borderRadius: 14,
-    padding: 18,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  reflectionCtaText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  reflectionPreview: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 16,
-    marginTop: 16,
-  },
-  reflectionPreviewLabel: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 },
-  reflectionPreviewText: { fontSize: 14, color: '#374151', lineHeight: 21 },
   reflectionDone: { fontSize: 13, color: '#16a34a', fontWeight: '600', textAlign: 'center', marginTop: 14 },
   writtenBox: {
     backgroundColor: '#fff',

@@ -52,7 +52,7 @@ export async function proxy(request: NextRequest) {
       return supabaseResponse
     }
 
-    // Alumni get a read-only view of their book reflections only
+    // Alumni get a read-only view of their past reflections only
     if (role === 'alumni') {
       const allowed = ['/alumni', '/reset-password', '/auth', '/unsubscribe']
       if (!allowed.some(p => pathname.startsWith(p))) {

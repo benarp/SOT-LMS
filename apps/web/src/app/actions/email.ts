@@ -17,18 +17,14 @@ const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
   book_reading: 'Book Reading',
   video: 'Video',
-  book_reflection: 'Reflection',
   reflection: 'Reflection',
-  written: 'Reflection',
 }
 
 const typeIcons: Record<string, string> = {
   bible_reading: '📖',
   book_reading: '📚',
   video: '▶️',
-  book_reflection: '✍️',
   reflection: '✍️',
-  written: '✍️',
 }
 
 function buildEmailHtml({

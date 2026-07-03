@@ -6,7 +6,6 @@
 -- ─────────────────────────────────────────
 
 create type user_role as enum ('admin', 'group_leader', 'student');
-create type homework_type as enum ('bible_reading', 'video', 'book_reflection', 'written');
 
 -- ─────────────────────────────────────────
 -- PROFILES (extends Supabase auth)
@@ -54,15 +53,6 @@ alter table profiles add constraint profiles_group_id_fkey
 -- BOOKS
 -- ─────────────────────────────────────────
 
-create table books (
-  id uuid primary key default gen_random_uuid(),
-  school_year_id uuid not null references school_years on delete cascade,
-  title text not null,
-  author text,
-  sort_order int not null default 0,
-  created_at timestamptz not null default now()
-);
-
 -- ─────────────────────────────────────────
 -- WEEKS
 -- ─────────────────────────────────────────
@@ -84,12 +74,13 @@ create table weeks (
 create table homework_items (
   id uuid primary key default gen_random_uuid(),
   week_id uuid not null references weeks on delete cascade,
-  type homework_type not null,
+  type text not null check (type in ('bible_reading', 'book_reading', 'video', 'reflection')),
   title text not null,
   description text,
   external_url text,       -- for video links
-  book_id uuid references books on delete set null, -- for book_reflection type
+  content text,            -- day-by-day reading list or reflection prompt
   sort_order int not null default 0,
+  show_attribution boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -104,20 +95,6 @@ create table submissions (
   completed_at timestamptz not null default now(),
   is_late boolean not null default false,
   unique (student_id, homework_item_id)
-);
-
--- ─────────────────────────────────────────
--- BOOK REFLECTION SUBMISSIONS
--- ─────────────────────────────────────────
-
-create table book_reflections (
-  id uuid primary key default gen_random_uuid(),
-  student_id uuid not null references profiles on delete cascade,
-  book_id uuid not null references books on delete cascade,
-  content text,            -- typed directly
-  file_url text,           -- uploaded file path in Supabase Storage
-  submitted_at timestamptz not null default now(),
-  unique (student_id, book_id)
 );
 
 -- ─────────────────────────────────────────
@@ -141,11 +118,9 @@ create table announcements (
 alter table profiles enable row level security;
 alter table school_years enable row level security;
 alter table groups enable row level security;
-alter table books enable row level security;
 alter table weeks enable row level security;
 alter table homework_items enable row level security;
 alter table submissions enable row level security;
-alter table book_reflections enable row level security;
 alter table announcements enable row level security;
 
 -- Helper: get current user's role
@@ -175,10 +150,7 @@ create policy "school_years: admin write" on school_years for all using (current
 create policy "groups: read all" on groups for select using (auth.role() = 'authenticated');
 create policy "groups: admin write" on groups for all using (current_user_role() = 'admin');
 
--- Books, weeks, homework items: same
-create policy "books: read all" on books for select using (auth.role() = 'authenticated');
-create policy "books: admin write" on books for all using (current_user_role() = 'admin');
-
+-- Weeks, homework items: same
 create policy "weeks: read all" on weeks for select using (auth.role() = 'authenticated');
 create policy "weeks: admin write" on weeks for all using (current_user_role() = 'admin');
 
@@ -189,14 +161,6 @@ create policy "homework_items: admin write" on homework_items for all using (cur
 create policy "submissions: own" on submissions for all using (student_id = auth.uid());
 create policy "submissions: admin read" on submissions for select using (current_user_role() = 'admin');
 create policy "submissions: group leader read" on submissions for select using (
-  current_user_role() = 'group_leader' and
-  student_id in (select id from profiles where group_id = current_user_group_id())
-);
-
--- Book reflections: same pattern
-create policy "book_reflections: own" on book_reflections for all using (student_id = auth.uid());
-create policy "book_reflections: admin read" on book_reflections for select using (current_user_role() = 'admin');
-create policy "book_reflections: group leader read" on book_reflections for select using (
   current_user_role() = 'group_leader' and
   student_id in (select id from profiles where group_id = current_user_group_id())
 );

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 
 export default async function ReportsPage() {
   const supabase = await createClient()
@@ -101,7 +102,9 @@ export default async function ReportsPage() {
               <tbody>
                 {weekStats.map((week, i) => (
                   <tr key={week.id} className={i < weekStats.length - 1 ? 'border-b border-gray-50' : ''}>
-                    <td className="px-4 py-3 font-medium text-gray-900">{week.title}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      <Link href={`/admin/reports/${week.id}`} className="hover:underline">{week.title}</Link>
+                    </td>
                     <td className="px-4 py-3 text-gray-400">{new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-medium ${week.completionRate >= 80 ? 'text-green-600' : week.completionRate >= 50 ? 'text-amber-500' : 'text-red-500'}`}>

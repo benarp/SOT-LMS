@@ -19,7 +19,7 @@ export async function markComplete(homeworkItemId: string, weekDueDate: string) 
 
   if (error) throw new Error(error.message)
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'layout')
 }
 
 export async function submitReflection(
@@ -43,7 +43,7 @@ export async function submitReflection(
   }, { onConflict: 'student_id,homework_item_id' })
 
   if (error) return { error: error.message }
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'layout')
   return {}
 }
 
@@ -60,5 +60,5 @@ export async function markIncomplete(homeworkItemId: string) {
 
   if (error) throw new Error(error.message)
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'layout')
 }

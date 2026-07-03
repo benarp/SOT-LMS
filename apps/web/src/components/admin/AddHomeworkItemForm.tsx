@@ -3,9 +3,7 @@
 import { useState, useTransition } from 'react'
 import { addHomeworkItem } from '@/app/actions/admin'
 
-type Book = { id: string; title: string }
-
-export default function AddHomeworkItemForm({ weekId, books, nextSortOrder }: { weekId: string, books: Book[], nextSortOrder: number }) {
+export default function AddHomeworkItemForm({ weekId, nextSortOrder }: { weekId: string, nextSortOrder: number }) {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState('bible_reading')
   const [error, setError] = useState('')
@@ -98,16 +96,6 @@ export default function AddHomeworkItemForm({ weekId, books, nextSortOrder }: { 
             <span>Show BibleProject attribution under the video (&quot;Video provided by BibleProject&quot; with a link to their site)</span>
           </label>
         </>
-      )}
-
-      {type === 'reflection' && (
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Book <span className="text-gray-400">(optional — links the reflection to a book)</span></label>
-          <select name="bookId" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
-            <option value="">No book — standalone reflection</option>
-            {books.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
-          </select>
-        </div>
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}

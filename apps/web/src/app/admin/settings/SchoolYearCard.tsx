@@ -51,7 +51,7 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
 
   async function handleComplete() {
     if (!confirm(
-      `Complete ${year.name}?\n\nAll current students become alumni of this year — they keep their login and can view their book reflections, but stop receiving weekly emails and won't appear in next year's cohort.\n\nReturning students who'll lead groups can be promoted afterward from their profile.`
+      `Complete ${year.name}?\n\nAll current students become alumni of this year — they keep their login and can view their past reflections, but stop receiving weekly emails and won't appear in next year's cohort.\n\nReturning students who'll lead groups can be promoted afterward from their profile.`
     )) return
     setCompleting(true)
     setError('')

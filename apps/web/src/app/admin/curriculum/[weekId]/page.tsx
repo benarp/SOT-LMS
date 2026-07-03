@@ -9,9 +9,7 @@ const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
   book_reading: 'Book Reading',
   video: 'Video',
-  book_reflection: 'Reflection',
   reflection: 'Reflection',
-  written: 'Reflection',
 }
 
 export default async function WeekEditPage({ params }: { params: Promise<{ weekId: string }> }) {
@@ -30,11 +28,6 @@ export default async function WeekEditPage({ params }: { params: Promise<{ weekI
     .from('homework_items')
     .select('id, type, title, description, external_url, content, sort_order, show_attribution')
     .eq('week_id', weekId)
-    .order('sort_order', { ascending: true })
-
-  const { data: books } = await supabase
-    .from('books')
-    .select('id, title')
     .order('sort_order', { ascending: true })
 
   return (
@@ -84,7 +77,7 @@ export default async function WeekEditPage({ params }: { params: Promise<{ weekI
         </div>
       </div>
 
-      <AddHomeworkItemForm weekId={weekId} books={books || []} nextSortOrder={(items || []).length + 1} />
+      <AddHomeworkItemForm weekId={weekId} nextSortOrder={(items || []).length + 1} />
     </div>
   )
 }

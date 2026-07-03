@@ -24,9 +24,7 @@ const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
   book_reading: 'Book Reading',
   video: 'Video',
-  book_reflection: 'Reflection',
   reflection: 'Reflection',
-  written: 'Reflection',
 }
 
 export default function ThisWeekScreen() {
@@ -164,7 +162,7 @@ export default function ThisWeekScreen() {
             <Text style={styles.alumniTitle}>Your year is complete</Text>
             <Text style={styles.alumniText}>
               Thank you for being part of the School of Transformation. The reflections you wrote
-              on each book are kept for you in the web portal.
+              are kept for you in the web portal.
             </Text>
           </View>
         ) : error ? (

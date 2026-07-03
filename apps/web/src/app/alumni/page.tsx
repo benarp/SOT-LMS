@@ -19,12 +19,13 @@ export default async function AlumniPage() {
     ? await supabase.from('school_years').select('name').eq('id', profile.alumni_year_id).single()
     : { data: null }
 
-  // Their book reflections, joined to book titles for that year
+  // Their written reflection responses, joined to the homework item title
   const { data: reflections } = await supabase
-    .from('book_reflections')
-    .select('id, content, submitted_at, books(title, author)')
+    .from('submissions')
+    .select('id, response_text, completed_at, homework_items(title)')
     .eq('student_id', user.id)
-    .order('submitted_at', { ascending: true })
+    .not('response_text', 'is', null)
+    .order('completed_at', { ascending: true })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -41,26 +42,25 @@ export default async function AlumniPage() {
           {profile.full_name ? `Welcome back, ${profile.full_name.split(' ')[0]}` : 'Welcome back'}
         </h2>
         <p className="text-sm text-gray-500 mt-2 mb-8">
-          Your year at the School of Transformation is complete. The reflections you wrote on each
-          book are kept here for you.
+          Your year at the School of Transformation is complete. The reflections you wrote are kept
+          here for you.
         </p>
 
         <div className="space-y-4">
           {(reflections ?? []).map(r => {
-            const book = r.books as unknown as { title: string; author: string | null } | null
+            const item = r.homework_items as unknown as { title: string } | null
             return (
               <div key={r.id} className="bg-white border border-gray-200 rounded-xl p-6">
-                <p className="text-sm font-semibold text-gray-900">{book?.title ?? 'Untitled book'}</p>
-                {book?.author && <p className="text-xs text-gray-400 mt-0.5">{book.author}</p>}
-                <p className="text-sm text-gray-700 mt-4 whitespace-pre-line leading-relaxed">{r.content}</p>
+                <p className="text-sm font-semibold text-gray-900">{item?.title ?? 'Untitled reflection'}</p>
+                <p className="text-sm text-gray-700 mt-4 whitespace-pre-line leading-relaxed">{r.response_text}</p>
                 <p className="text-xs text-gray-300 mt-4">
-                  Written {new Date(r.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  Written {new Date(r.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
             )
           })}
           {(reflections ?? []).length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-12">No book reflections on record.</p>
+            <p className="text-sm text-gray-400 text-center py-12">No reflections on record.</p>
           )}
         </div>
       </main>

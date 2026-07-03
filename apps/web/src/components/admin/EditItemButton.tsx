@@ -49,7 +49,7 @@ export default function EditItemButton({ item }: { item: Item }) {
     )
   }
 
-  const showContent = ['bible_reading', 'book_reading', 'reflection', 'written'].includes(item.type)
+  const showContent = ['bible_reading', 'book_reading', 'reflection'].includes(item.type)
   const showUrl = item.type === 'video'
   const contentLabel = item.type === 'bible_reading' || item.type === 'book_reading'
     ? 'Day-by-day reading'
