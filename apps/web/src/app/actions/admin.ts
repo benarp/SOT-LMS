@@ -17,6 +17,8 @@ function getAdminClient() {
 // ── Curriculum ──────────────────────────────────────────────
 
 export async function addWeek(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
   const schoolYearId = formData.get('schoolYearId') as string
   const weekNumber = parseInt(formData.get('weekNumber') as string)
@@ -36,6 +38,8 @@ export async function addWeek(formData: FormData): Promise<{ error?: string }> {
 }
 
 export async function addHomeworkItem(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
   const weekId = formData.get('weekId') as string
   const type = formData.get('type') as string
@@ -62,6 +66,8 @@ export async function addHomeworkItem(formData: FormData): Promise<{ error?: str
 }
 
 export async function updateHomeworkItem(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
   const itemId = formData.get('itemId') as string
   const weekId = formData.get('weekId') as string
@@ -90,6 +96,8 @@ export async function updateHomeworkItem(formData: FormData): Promise<{ error?: 
 }
 
 export async function deleteHomeworkItem(itemId: string, weekId: string): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
 
   // Completion records cascade with the item — block the delete once students
@@ -111,15 +119,15 @@ export async function deleteHomeworkItem(itemId: string, weekId: string): Promis
 // ── Announcements ───────────────────────────────────────────
 
 export async function createAnnouncement(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
 
   const title = formData.get('title') as string
   const body = formData.get('body') as string
 
   const { error } = await supabase.from('announcements').insert({
-    created_by: user.id,
+    created_by: ctx.user.id,
     title,
     body,
     publish_at: new Date().toISOString(),
@@ -131,6 +139,8 @@ export async function createAnnouncement(formData: FormData): Promise<{ error?: 
 }
 
 export async function deleteAnnouncement(id: string): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
   const { error } = await supabase.from('announcements').delete().eq('id', id)
   if (error) return { error: error.message }
@@ -174,6 +184,8 @@ export async function inviteStudent(formData: FormData): Promise<{ error?: strin
 }
 
 export async function updateStudentGroup(studentId: string, groupId: string | null): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
   const { error } = await supabase.from('profiles')
     .update({ group_id: groupId || null })
@@ -316,6 +328,8 @@ export async function sendPasswordSetupEmail(userId: string): Promise<{ error?: 
 }
 
 export async function addGroup(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
   const supabase = await createClient()
   const name = formData.get('name') as string
   const schoolYearId = formData.get('schoolYearId') as string
