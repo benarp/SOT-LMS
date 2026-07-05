@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ThemeToggle from '@/components/ThemeToggle'
 
 type Status = { kind: 'success' | 'error'; message: string } | null
 
@@ -102,7 +103,13 @@ export default function AccountPage() {
   return (
     <div className="max-w-lg">
       <h1 className="text-2xl font-medium text-gray-900 mb-1">Account</h1>
-      <p className="text-sm text-gray-400 mb-8">Update your name, email, or password.</p>
+      <p className="text-sm text-gray-400 mb-8">Update your appearance, name, email, or password.</p>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-5">
+        <p className="text-sm font-medium text-gray-700 mb-1">Appearance</p>
+        <p className="text-xs text-gray-400 mb-4">Choose a theme for this device. &ldquo;System&rdquo; follows your device settings.</p>
+        <ThemeToggle />
+      </div>
 
       <form onSubmit={saveName} className="bg-white border border-gray-200 rounded-xl p-6 mb-5 space-y-4">
         <div>

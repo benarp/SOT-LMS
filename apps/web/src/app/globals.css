@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode: `dark:` utilities apply under a .dark ancestor. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -18,14 +21,79 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Inputs/placeholders track the (invertible) neutral scale so they flip too. */
 input,
 textarea,
 select {
-  color: #111827;
+  color: var(--color-gray-900);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
   opacity: 1;
+}
+
+/*
+  Dark theme. The app styles its entire structure with the neutral gray scale
+  + white, so we invert those color variables here rather than adding `dark:`
+  variants to ~1000 class usages. Every `bg-white` / `text-gray-900` / border
+  re-resolves automatically. Accent ramps (badges, alert boxes) are inverted
+  the same way so colored chips stay legible on a dark surface.
+  The elevation relationship is preserved by design: the page background
+  (gray-50) is darkest and card surfaces (white) sit one step lighter.
+*/
+.dark {
+  --background: #0a0a0b;
+  --foreground: #f5f5f7;
+
+  /* Neutral scale — hand-tuned, not a raw value swap, to keep card > page. */
+  --color-white: #17171a;   /* elevated surfaces: cards, inputs, buttons-on-dark */
+  --color-gray-50: #0a0a0b; /* app background (darkest) */
+  --color-gray-100: #232327;/* subtle raised bg / faint border */
+  --color-gray-200: #2e2e33;/* default border */
+  --color-gray-300: #3f3f46;/* stronger border / hover border */
+  --color-gray-400: #8e8e98;/* muted text */
+  --color-gray-500: #a1a1ab;/* secondary text */
+  --color-gray-600: #c4c4cc;/* secondary-strong text */
+  --color-gray-700: #dcdce2;/* body text */
+  --color-gray-800: #ededf0;
+  --color-gray-900: #f5f5f7;/* headings / primary-button surface */
+  --color-gray-950: #ffffff;
+
+  /* Accent ramps inverted (50↔900, 100↔800, …) from Tailwind defaults. */
+  --color-green-50: #14532d;  --color-green-100: #166534; --color-green-200: #15803d;
+  --color-green-300: #16a34a; --color-green-400: #22c55e; --color-green-500: #4ade80;
+  --color-green-600: #86efac; --color-green-700: #bbf7d0; --color-green-800: #dcfce7;
+  --color-green-900: #f0fdf4;
+
+  --color-red-50: #7f1d1d;  --color-red-100: #991b1b; --color-red-200: #b91c1c;
+  --color-red-300: #dc2626; --color-red-400: #ef4444; --color-red-500: #f87171;
+  --color-red-600: #fca5a5; --color-red-700: #fecaca; --color-red-800: #fee2e2;
+  --color-red-900: #fef2f2;
+
+  --color-amber-50: #78350f;  --color-amber-100: #92400e; --color-amber-200: #b45309;
+  --color-amber-300: #d97706; --color-amber-400: #f59e0b; --color-amber-500: #fbbf24;
+  --color-amber-600: #fcd34d; --color-amber-700: #fde68a; --color-amber-800: #fef3c7;
+  --color-amber-900: #fffbeb;
+
+  --color-blue-50: #1e3a8a;  --color-blue-100: #1e40af; --color-blue-200: #1d4ed8;
+  --color-blue-300: #2563eb; --color-blue-400: #3b82f6; --color-blue-500: #60a5fa;
+  --color-blue-600: #93c5fd; --color-blue-700: #bfdbfe; --color-blue-800: #dbeafe;
+  --color-blue-900: #eff6ff;
+
+  --color-emerald-50: #064e3b;  --color-emerald-100: #065f46; --color-emerald-200: #047857;
+  --color-emerald-300: #059669; --color-emerald-400: #10b981; --color-emerald-500: #34d399;
+  --color-emerald-600: #6ee7b7; --color-emerald-700: #a7f3d0; --color-emerald-800: #d1fae5;
+  --color-emerald-900: #ecfdf5;
+
+  --color-yellow-50: #713f12;  --color-yellow-100: #854d0e; --color-yellow-200: #a16207;
+  --color-yellow-300: #ca8a04; --color-yellow-400: #eab308; --color-yellow-500: #facc15;
+  --color-yellow-600: #fde047; --color-yellow-700: #fef08a; --color-yellow-800: #fef9c3;
+  --color-yellow-900: #fefce8;
+
+  --color-orange-50: #7c2d12;  --color-orange-100: #9a3412; --color-orange-200: #c2410c;
+  --color-orange-300: #ea580c; --color-orange-400: #f97316; --color-orange-500: #fb923c;
+  --color-orange-600: #fdba74; --color-orange-700: #fed7aa; --color-orange-800: #ffedd5;
+  --color-orange-900: #fff7ed;
 }

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import CreateSchoolYearForm from './CreateSchoolYearForm'
 import SchoolYearCard from './SchoolYearCard'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -15,6 +16,13 @@ export default async function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-medium text-gray-900">Settings</h1>
         <p className="text-sm text-gray-400 mt-1">Manage school years and application windows.</p>
+      </div>
+
+      {/* Appearance */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Appearance</h2>
+        <p className="text-xs text-gray-400 mb-4">Theme for this device. &ldquo;System&rdquo; follows your device settings.</p>
+        <ThemeToggle />
       </div>
 
       {/* School years list */}
