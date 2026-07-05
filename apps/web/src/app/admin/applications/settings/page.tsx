@@ -1,54 +1,52 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getApplicationCycle } from '@/lib/applicationYear'
 import Link from 'next/link'
-import ApplicationSettingsForm from './ApplicationSettingsForm'
-
-const DEFAULTS = {
-  q_testimony_label: 'Share your testimony',
-  q_testimony_hint: 'How did you come to faith, and what has your journey with Jesus looked like?',
-  q_why_attend_label: 'Why do you want to attend the School of Transformation this year?',
-  q_why_attend_hint: '',
-  q_goals_label: 'What are you hoping God will do in your life through this program?',
-  q_goals_hint: '',
-  q_serving_label: 'Are you currently involved in a local church?',
-  q_serving_hint: "If so, describe how you're serving.",
-  q_additional_label: 'Is there anything else you\'d like us to know?',
-  q_additional_hint: 'Optional.',
-  agreement_text:
-    'I understand that School of Transformation is a 9-month commitment running September through May. I agree to attend weekly sessions and complete assignments to the best of my ability. I understand there is a cost associated with the program.',
-}
+import FormBuilder from './FormBuilder'
+import type { AppField } from '@/lib/applicationForm'
 
 export default async function ApplicationSettingsPage() {
-  const supabase = await createClient()
-
   const { year: schoolYear } = await getApplicationCycle()
+  const admin = createAdminClient()
 
-  const { data: settings } = schoolYear
-    ? await supabase
-        .from('application_settings')
+  const { data: fields } = schoolYear
+    ? await admin
+        .from('application_fields')
         .select('*')
         .eq('school_year_id', schoolYear.id)
-        .single()
-    : { data: null }
+        .order('sort_order', { ascending: true })
+    : { data: [] }
 
-  const values = { ...DEFAULTS, ...(settings || {}) }
+  // Per-field answer counts (drives the "N answers" note + delete blocking UX)
+  const fieldIds = (fields ?? []).map(f => f.id)
+  const { data: answerRows } = fieldIds.length
+    ? await admin.from('application_answers').select('field_id').in('field_id', fieldIds)
+    : { data: [] }
+  const counts = new Map<string, number>()
+  for (const row of answerRows ?? []) counts.set(row.field_id, (counts.get(row.field_id) ?? 0) + 1)
+
+  const withCounts = ((fields ?? []) as AppField[]).map(f => ({ ...f, answer_count: counts.get(f.id) ?? 0 }))
 
   return (
     <div className="max-w-2xl">
       <div className="mb-6 flex items-center gap-2 text-sm text-gray-400">
         <Link href="/admin/applications" className="hover:text-gray-700">Applications</Link>
         <span>/</span>
-        <span className="text-gray-600">Questions</span>
+        <span className="text-gray-600">Form builder</span>
       </div>
 
       <div className="mb-8">
-        <h1 className="text-2xl font-medium text-gray-900">Application questions</h1>
+        <h1 className="text-2xl font-medium text-gray-900">Application form</h1>
         <p className="text-sm text-gray-400 mt-1">
-          {schoolYear?.name ?? 'No active school year'} · Changes apply to new submissions immediately.
+          {schoolYear?.name ?? 'No application cycle configured'} · Section headers split the
+          form into steps for applicants. Changes apply immediately.
         </p>
       </div>
 
-      <ApplicationSettingsForm values={values} />
+      {schoolYear ? (
+        <FormBuilder fields={withCounts} schoolYearId={schoolYear.id} />
+      ) : (
+        <p className="text-sm text-gray-400">Set an application window on a school year first (Settings).</p>
+      )}
     </div>
   )
 }

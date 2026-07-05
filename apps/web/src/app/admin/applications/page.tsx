@@ -3,10 +3,12 @@ import { getApplicationCycle } from '@/lib/applicationYear'
 import Link from 'next/link'
 
 const statusBadge: Record<string, { label: string; classes: string }> = {
-  draft:     { label: 'In progress',   classes: 'bg-gray-100 text-gray-500' },
-  submitted: { label: 'Under review',  classes: 'bg-blue-50 text-blue-600' },
-  approved:  { label: 'Accepted',      classes: 'bg-green-50 text-green-700' },
-  denied:    { label: 'Not accepted',  classes: 'bg-red-50 text-red-600' },
+  draft:               { label: 'In progress',         classes: 'bg-gray-100 text-gray-500' },
+  submitted:           { label: 'Reference requested', classes: 'bg-blue-50 text-blue-600' }, // legacy
+  reference_requested: { label: 'Reference requested', classes: 'bg-blue-50 text-blue-600' },
+  interview:           { label: 'Interview',           classes: 'bg-amber-50 text-amber-700' },
+  approved:            { label: 'Accepted',            classes: 'bg-green-50 text-green-700' },
+  denied:              { label: 'Not accepted',        classes: 'bg-red-50 text-red-600' },
 }
 
 const refBadge: Record<string, { label: string; classes: string }> = {
@@ -39,9 +41,9 @@ export default async function AdminApplicationsPage() {
 
   const counts = {
     total: (applications || []).length,
-    submitted: (applications || []).filter(a => a.status === 'submitted').length,
+    reference: (applications || []).filter(a => a.status === 'reference_requested' || a.status === 'submitted').length,
+    interview: (applications || []).filter(a => a.status === 'interview').length,
     approved: (applications || []).filter(a => a.status === 'approved').length,
-    denied: (applications || []).filter(a => a.status === 'denied').length,
   }
 
   return (
@@ -63,9 +65,9 @@ export default async function AdminApplicationsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
           { label: 'Total', value: counts.total },
-          { label: 'Under review', value: counts.submitted },
+          { label: 'Awaiting reference', value: counts.reference },
+          { label: 'Interview', value: counts.interview },
           { label: 'Accepted', value: counts.approved },
-          { label: 'Not accepted', value: counts.denied },
         ].map(s => (
           <div key={s.label} className="bg-white border border-gray-200 rounded-xl px-4 py-3">
             <p className="text-2xl font-semibold text-gray-900">{s.value}</p>

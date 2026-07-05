@@ -45,30 +45,24 @@ async function getOrCreateAccount(studentId: string, schoolYearId: string) {
   return account
 }
 
-// ── Student: start checkout ─────────────────────────────────
-// Deposit ($400) charged at checkout; $200/month subscription starts after a
-// 30-day trial. The 10-cycle cap is enforced by the webhook.
+// ── Checkout ────────────────────────────────────────────────
+// Deposit ($400) charged at checkout; the $200 x 10 subscription is created
+// by the webhook afterwards — keeping Stripe's trial/"per month until you
+// cancel" language off the checkout page. The cycle cap lives in the webhook.
 
-export async function startCheckout(): Promise<{ error?: string } | never> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const { data: year } = await supabase
-    .from('school_years').select('id, name').eq('is_active', true).single()
-  if (!year) return { error: 'No active school year' }
-
+async function createDepositSession(
+  userId: string,
+  year: { id: string; name: string },
+  returnPath: string
+): Promise<{ url?: string; error?: string }> {
   let account
   try {
-    account = await getOrCreateAccount(user.id, year.id)
+    account = await getOrCreateAccount(userId, year.id)
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Could not set up billing' }
   }
   if (account.status !== 'pending') return { error: 'Payment is already set up.' }
 
-  // Checkout collects only the deposit and saves the card. The $200 x 10
-  // subscription is created by the webhook afterwards — keeping Stripe's
-  // trial/"per month until you cancel" language off the checkout page.
   const session = await getStripe().checkout.sessions.create({
     mode: 'payment',
     customer: account.stripe_customer_id,
@@ -85,7 +79,7 @@ export async function startCheckout(): Promise<{ error?: string } | never> {
     payment_intent_data: {
       setup_future_usage: 'off_session',
     },
-    metadata: { sot_purpose: 'tuition_deposit', student_id: user.id, school_year_id: year.id, year_name: year.name },
+    metadata: { sot_purpose: 'tuition_deposit', student_id: userId, school_year_id: year.id, year_name: year.name },
     custom_text: {
       submit: {
         message:
@@ -95,11 +89,53 @@ export async function startCheckout(): Promise<{ error?: string } | never> {
           `Payments stop automatically after the ${TOTAL_CYCLES}th monthly payment.`,
       },
     },
-    success_url: `${SITE_URL}/dashboard/billing?setup=success`,
-    cancel_url: `${SITE_URL}/dashboard/billing?setup=cancelled`,
+    success_url: `${SITE_URL}${returnPath}?setup=success`,
+    cancel_url: `${SITE_URL}${returnPath}?setup=cancelled`,
   })
 
-  redirect(session.url!)
+  return { url: session.url! }
+}
+
+/** Enrolled students: deposit checkout for the active school year. */
+export async function startCheckout(): Promise<{ error?: string } | never> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: year } = await supabase
+    .from('school_years').select('id, name').eq('is_active', true).single()
+  if (!year) return { error: 'No active school year' }
+
+  const result = await createDepositSession(user.id, year, '/dashboard/billing')
+  if (result.error) return { error: result.error }
+  redirect(result.url!)
+}
+
+/** Accepted applicants: deposit checkout for the year they were accepted
+ *  into (usually not yet active). Only available once approved. */
+export async function startApplicantCheckout(): Promise<{ error?: string } | never> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: app } = await supabase
+    .from('applications')
+    .select('school_year_id, status')
+    .eq('applicant_id', user.id)
+    .eq('status', 'approved')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!app) return { error: 'No accepted application found.' }
+
+  const admin = createAdminClient()
+  const { data: year } = await admin
+    .from('school_years').select('id, name').eq('id', app.school_year_id).single()
+  if (!year) return { error: 'School year not found.' }
+
+  const result = await createDepositSession(user.id, year, '/apply/status')
+  if (result.error) return { error: result.error }
+  redirect(result.url!)
 }
 
 // ── Student: update card on file ────────────────────────────

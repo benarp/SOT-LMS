@@ -53,101 +53,27 @@ export async function getApplicationStep(): Promise<{
 
   const { data: app } = await supabase
     .from('applications')
-    .select('id, status, q_testimony, q_why_attend, q_goals, q_serving, agreement_accepted')
+    .select('id, status, questionnaire_submitted_at, q_testimony, q_why_attend, q_goals, q_serving, agreement_accepted')
     .eq('school_year_id', schoolYear.id)
     .eq('applicant_id', user.id)
     .single()
 
   if (!app) return { step: 'questionnaire' }
 
-  // Step 1 complete = at least 3 essay answers filled + agreement accepted
+  // Step 1 complete = submitted via the form builder, or (legacy applications
+  // from before the builder) 3+ essay answers + agreement accepted
   const answeredEssays = [app.q_testimony, app.q_why_attend, app.q_goals, app.q_serving]
     .filter(Boolean).length
-  const step1Done = answeredEssays >= 3 && app.agreement_accepted
+  const step1Done = !!app.questionnaire_submitted_at || (answeredEssays >= 3 && app.agreement_accepted)
 
   if (!step1Done) return { step: 'questionnaire', applicationId: app.id }
 
-  // Submitted or later = go to status
-  if (app.status === 'submitted' || app.status === 'approved' || app.status === 'denied') {
+  // Reference requested or later = go to status
+  if (app.status !== 'draft') {
     return { step: 'status', applicationId: app.id }
   }
 
   return { step: 'reference', applicationId: app.id }
-}
-
-// ─── Admin: update application question settings ─────────────────────────────
-
-export async function updateApplicationSettings(formData: FormData): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return { error: 'Not authorized' }
-
-  const { year: schoolYear } = await getApplicationCycle()
-  if (!schoolYear) return { error: 'No application cycle configured' }
-
-  const updates = {
-    school_year_id: schoolYear.id,
-    q_testimony_label: formData.get('q_testimony_label') as string,
-    q_testimony_hint: formData.get('q_testimony_hint') as string,
-    q_why_attend_label: formData.get('q_why_attend_label') as string,
-    q_why_attend_hint: formData.get('q_why_attend_hint') as string,
-    q_goals_label: formData.get('q_goals_label') as string,
-    q_goals_hint: formData.get('q_goals_hint') as string,
-    q_serving_label: formData.get('q_serving_label') as string,
-    q_serving_hint: formData.get('q_serving_hint') as string,
-    q_additional_label: formData.get('q_additional_label') as string,
-    q_additional_hint: formData.get('q_additional_hint') as string,
-    agreement_text: formData.get('agreement_text') as string,
-    updated_at: new Date().toISOString(),
-  }
-
-  const { error } = await supabase
-    .from('application_settings')
-    .upsert(updates, { onConflict: 'school_year_id' })
-
-  if (error) return { error: error.message }
-
-  revalidatePath('/admin/applications/settings')
-  revalidatePath('/apply/questionnaire')
-  return {}
-}
-
-// ─── Step 1: Save questionnaire ───────────────────────────────────────────────
-
-export async function saveQuestionnaire(formData: FormData): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const { year: schoolYear } = await getApplicationCycle()
-  if (!schoolYear) return { error: 'No application cycle configured' }
-
-  const updates = {
-    full_name: formData.get('full_name') as string,
-    phone: formData.get('phone') as string,
-    city: formData.get('city') as string,
-    q_testimony: formData.get('q_testimony') as string,
-    q_why_attend: formData.get('q_why_attend') as string,
-    q_goals: formData.get('q_goals') as string,
-    q_serving: formData.get('q_serving') as string,
-    q_additional: formData.get('q_additional') as string,
-    agreement_accepted: formData.get('agreement') === 'on',
-    updated_at: new Date().toISOString(),
-  }
-
-  const { error } = await supabase
-    .from('applications')
-    .update(updates)
-    .eq('school_year_id', schoolYear.id)
-    .eq('applicant_id', user.id)
-
-  if (error) return { error: error.message }
-
-  revalidatePath('/apply/questionnaire')
-  return {}
 }
 
 // ─── Step 2: Save pastor info & send reference email ─────────────────────────
@@ -187,10 +113,10 @@ export async function savePastorInfo(formData: FormData): Promise<{ error?: stri
 
   if (refError) return { error: refError.message }
 
-  // Update application status to submitted
+  // Reference is out — application waits in the reference stage
   await admin
     .from('applications')
-    .update({ status: 'submitted', submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({ status: 'reference_requested', submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', app.id)
 
   // Send emails if Resend is configured
@@ -246,6 +172,14 @@ export async function submitPastoralReference(
 
   if (error) return { error: error.message }
 
+  // Reference received — advance the application to the interview stage
+  // (only from reference_requested, so a waived/decided app isn't moved back)
+  await admin
+    .from('applications')
+    .update({ status: 'interview', updated_at: new Date().toISOString() })
+    .eq('id', ref.application_id)
+    .eq('status', 'reference_requested')
+
   // Send confirmation to pastor
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY)
@@ -288,13 +222,9 @@ export async function approveApplication(applicationId: string, notes?: string):
     updated_at: new Date().toISOString(),
   }).eq('id', applicationId)
 
-  // Enroll immediately only if their year is already running; otherwise they
-  // stay an accepted applicant and are enrolled when the year is activated.
-  const { data: appYear } = await admin
-    .from('school_years').select('is_active').eq('id', app.school_year_id).single()
-  if (appYear?.is_active) {
-    await admin.from('profiles').update({ role: 'student' }).eq('id', app.applicant_id)
-  }
+  // Note: acceptance does NOT grant platform access. Accepted applicants see
+  // only tuition setup on their status page; they become students (and gain
+  // dashboard access) once their deposit is paid and their year activates.
 
   // Send approval email
   if (process.env.RESEND_API_KEY) {
@@ -310,6 +240,48 @@ export async function approveApplication(applicationId: string, notes?: string):
       }).catch(() => null)
     }
   }
+
+  revalidatePath('/admin/applications')
+  revalidatePath(`/admin/applications/${applicationId}`)
+  return {}
+}
+
+// ─── Admin: waive the reference and move to interview ─────────────────────────
+
+export async function advancePastReference(applicationId: string, note: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase.from('profiles').select('role, email').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Not authorized' }
+  if (!note.trim()) return { error: 'A note is required — record why the reference step is being skipped.' }
+
+  const admin = createAdminClient()
+  const { data: app, error } = await admin
+    .from('applications')
+    .update({
+      status: 'interview',
+      reference_waiver_note: note.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId)
+    .eq('status', 'reference_requested')
+    .select('id')
+    .maybeSingle()
+
+  if (error) return { error: error.message }
+  if (!app) return { error: 'Application is not in the reference stage.' }
+
+  const { logAudit } = await import('@/lib/audit')
+  await logAudit({
+    actor_id: user.id,
+    actor_email: profile.email,
+    action: 'application_reference_waived',
+    target_type: 'application',
+    target_id: applicationId,
+    detail: { note: note.trim() },
+  })
 
   revalidatePath('/admin/applications')
   revalidatePath(`/admin/applications/${applicationId}`)

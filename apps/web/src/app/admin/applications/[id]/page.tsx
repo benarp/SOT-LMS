@@ -23,11 +23,30 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   if (!app) notFound()
 
-  const { data: ref } = await supabase
-    .from('pastoral_references')
-    .select('*')
-    .eq('application_id', id)
-    .single()
+  const [{ data: ref }, { data: answerRows }, { data: currentFields }] = await Promise.all([
+    supabase.from('pastoral_references').select('*').eq('application_id', id).single(),
+    supabase
+      .from('application_answers')
+      .select('field_id, field_label, field_type, field_sort, value')
+      .eq('application_id', id)
+      .order('field_sort', { ascending: true }),
+    supabase
+      .from('application_fields')
+      .select('id, show_if_field_id, show_if_value')
+      .eq('school_year_id', app.school_year_id),
+  ])
+
+  // Hide answers whose branching condition is no longer met (an applicant
+  // changed a controlling answer after answering the dependent question)
+  const answerByField = new Map((answerRows ?? []).map(a => [a.field_id, a.value as string | string[]]))
+  const conditionByField = new Map((currentFields ?? []).map(f => [f.id, f]))
+  const dynamicAnswers = (answerRows ?? []).filter(a => {
+    const cond = conditionByField.get(a.field_id)
+    if (!cond?.show_if_field_id || !cond.show_if_value) return true
+    const controlling = answerByField.get(cond.show_if_field_id)
+    if (controlling === undefined) return false
+    return Array.isArray(controlling) ? controlling.includes(cond.show_if_value) : controlling === cond.show_if_value
+  })
 
   const profile = Array.isArray(app.profiles) ? app.profiles[0] : app.profiles
   const email = (profile as { email?: string } | null)?.email ?? ''
@@ -60,21 +79,46 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         {isDecided && app.decision_notes && (
           <p className="text-sm text-gray-600 mt-3 bg-gray-50 rounded-lg p-3">{app.decision_notes}</p>
         )}
+        {app.reference_waiver_note && (
+          <p className="text-xs text-amber-700 mt-3 bg-amber-50 rounded-lg p-3">
+            Reference waived: {app.reference_waiver_note}
+          </p>
+        )}
       </div>
 
-      {/* Essay answers */}
+      {/* Questionnaire answers — dynamic (form builder) with legacy fallback */}
       <div className="bg-white border border-gray-200 rounded-xl px-6 py-5 mb-5 space-y-6">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Questionnaire</h2>
-        {Object.entries(ESSAY_LABELS).map(([key, label]) => {
-          const answer = app[key as keyof typeof app] as string | null
-          if (!answer) return null
-          return (
-            <div key={key}>
-              <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">{answer}</p>
+        {dynamicAnswers.length > 0 ? (
+          dynamicAnswers.map(a => (
+            <div key={a.field_id}>
+              <p className="text-xs font-medium text-gray-500 mb-1">{a.field_label}</p>
+              {Array.isArray(a.value) ? (
+                <ul className="text-sm text-gray-800 space-y-1">
+                  {(a.value as string[]).map(v => <li key={v} className="flex gap-2"><span className="text-green-600">✓</span><span>{v}</span></li>)}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-800 whitespace-pre-wrap">{String(a.value ?? '')}</p>
+              )}
             </div>
-          )
-        })}
+          ))
+        ) : (
+          <>
+            {Object.entries(ESSAY_LABELS).map(([key, label]) => {
+              const answer = app[key as keyof typeof app] as string | null
+              if (!answer) return null
+              return (
+                <div key={key}>
+                  <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{answer}</p>
+                </div>
+              )
+            })}
+            {!app.q_testimony && !app.q_why_attend && !app.q_goals && (
+              <p className="text-sm text-gray-400">No answers yet.</p>
+            )}
+          </>
+        )}
       </div>
 
       {/* Pastoral reference */}
@@ -112,9 +156,9 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         )}
       </div>
 
-      {/* Decision */}
-      {!isDecided && app.status === 'submitted' && (
-        <DecisionButtons applicationId={id} applicantName={app.full_name ?? ''} />
+      {/* Stage actions */}
+      {!isDecided && app.status !== 'draft' && (
+        <DecisionButtons applicationId={id} applicantName={app.full_name ?? ''} status={app.status} />
       )}
     </div>
   )
@@ -122,10 +166,12 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; classes: string }> = {
-    draft:     { label: 'In progress',  classes: 'bg-gray-100 text-gray-500' },
-    submitted: { label: 'Under review', classes: 'bg-blue-50 text-blue-600' },
-    approved:  { label: 'Accepted',     classes: 'bg-green-50 text-green-700' },
-    denied:    { label: 'Not accepted', classes: 'bg-red-50 text-red-600' },
+    draft:               { label: 'In progress',         classes: 'bg-gray-100 text-gray-500' },
+    submitted:           { label: 'Reference requested', classes: 'bg-blue-50 text-blue-600' }, // legacy
+    reference_requested: { label: 'Reference requested', classes: 'bg-blue-50 text-blue-600' },
+    interview:           { label: 'Interview',           classes: 'bg-amber-50 text-amber-700' },
+    approved:            { label: 'Accepted',            classes: 'bg-green-50 text-green-700' },
+    denied:              { label: 'Not accepted',        classes: 'bg-red-50 text-red-600' },
   }
   const cfg = map[status] ?? map.draft
   return <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cfg.classes}`}>{cfg.label}</span>

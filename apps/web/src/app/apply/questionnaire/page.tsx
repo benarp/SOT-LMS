@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getApplicationCycle } from '@/lib/applicationYear'
 import { redirect } from 'next/navigation'
 import QuestionnaireForm from './QuestionnaireForm'
+import type { AppField, AnswerMap } from '@/lib/applicationForm'
 
 export default async function QuestionnairePage() {
   const supabase = await createClient()
@@ -18,15 +19,21 @@ export default async function QuestionnairePage() {
     )
   }
 
-  const [{ data: app }, { data: settings }] = await Promise.all([
-    supabase.from('applications').select('*').eq('school_year_id', schoolYear.id).eq('applicant_id', user.id).single(),
-    supabase.from('application_settings').select('*').eq('school_year_id', schoolYear.id).single(),
+  const [{ data: app }, { data: fields }] = await Promise.all([
+    supabase.from('applications').select('id, status, full_name, phone, city').eq('school_year_id', schoolYear.id).eq('applicant_id', user.id).single(),
+    supabase.from('application_fields').select('*').eq('school_year_id', schoolYear.id).order('sort_order', { ascending: true }),
   ])
 
-  // If already submitted, redirect to status
-  if (app?.status === 'submitted' || app?.status === 'approved' || app?.status === 'denied') {
+  // Anything past draft (reference stage onward) belongs on the status page
+  if (app && app.status !== 'draft') {
     redirect('/apply/status')
   }
+
+  const { data: answerRows } = app
+    ? await supabase.from('application_answers').select('field_id, value').eq('application_id', app.id)
+    : { data: [] }
+  const answers: AnswerMap = {}
+  for (const row of answerRows ?? []) answers[row.field_id] = row.value as string | string[]
 
   return (
     <div>
@@ -43,7 +50,12 @@ export default async function QuestionnairePage() {
         </div>
       </div>
 
-      <QuestionnaireForm existing={app} settings={settings} schoolYearName={schoolYear.name} />
+      <QuestionnaireForm
+        fields={(fields ?? []) as AppField[]}
+        initialAnswers={answers}
+        contact={{ full_name: app?.full_name ?? '', phone: app?.phone ?? '', city: app?.city ?? '' }}
+        schoolYearName={schoolYear.name}
+      />
     </div>
   )
 }

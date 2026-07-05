@@ -183,6 +183,55 @@ export async function inviteStudent(formData: FormData): Promise<{ error?: strin
   return {}
 }
 
+/**
+ * Create a student account without sending any email — for transferring
+ * students who applied through another system. The account is created with
+ * the email pre-confirmed, so the student signs in by running the
+ * forgot-password flow with the same email they used on the other platform.
+ */
+export async function createStudentAccount(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
+
+  const email = ((formData.get('email') as string) || '').trim().toLowerCase()
+  const fullName = ((formData.get('fullName') as string) || '').trim()
+  if (!email || !fullName) return { error: 'Name and email are required.' }
+
+  const adminClient = getAdminClient()
+  const { data, error } = await adminClient.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  })
+
+  if (error) {
+    if (/already|exists|registered/i.test(error.message)) {
+      return { error: `An account with ${email} already exists.` }
+    }
+    return { error: error.message }
+  }
+
+  // The signup trigger creates the profile (role defaults to student);
+  // make name/role explicit in case the trigger metadata mapping changes
+  if (data?.user) {
+    await adminClient.from('profiles')
+      .update({ full_name: fullName, role: 'student' })
+      .eq('id', data.user.id)
+  }
+
+  await logAudit({
+    actor_id: ctx.user.id,
+    actor_email: ctx.profile.email,
+    action: 'student_account_created',
+    target_type: 'user',
+    target_id: email,
+    detail: { transfer: true },
+  })
+
+  revalidatePath('/admin/students')
+  return {}
+}
+
 export async function updateStudentGroup(studentId: string, groupId: string | null): Promise<{ error?: string }> {
   const { ctx, error: authError } = await guard()
   if (!ctx) return { error: authError }

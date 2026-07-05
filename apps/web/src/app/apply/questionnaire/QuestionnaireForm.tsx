@@ -1,140 +1,224 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { saveQuestionnaire } from '@/app/actions/apply'
+import { saveAnswer, saveContactInfo, submitQuestionnaire } from '@/app/actions/applicationForm'
+import {
+  type AppField, type AnswerMap, groupIntoSteps, isVisible, missingRequired,
+} from '@/lib/applicationForm'
 
-type Settings = {
-  q_testimony_label: string; q_testimony_hint: string
-  q_why_attend_label: string; q_why_attend_hint: string
-  q_goals_label: string; q_goals_hint: string
-  q_serving_label: string; q_serving_hint: string
-  q_additional_label: string; q_additional_hint: string
-  agreement_text: string
-} | null
+type Contact = { full_name: string; phone: string; city: string }
 
-const DEFAULTS: NonNullable<Settings> = {
-  q_testimony_label: 'Share your testimony',
-  q_testimony_hint: 'How did you come to faith, and what has your journey with Jesus looked like?',
-  q_why_attend_label: 'Why do you want to attend the School of Transformation this year?',
-  q_why_attend_hint: '',
-  q_goals_label: 'What are you hoping God will do in your life through this program?',
-  q_goals_hint: '',
-  q_serving_label: 'Are you currently involved in a local church?',
-  q_serving_hint: "If so, describe how you're serving.",
-  q_additional_label: "Is there anything else you'd like us to know?",
-  q_additional_hint: 'Optional.',
-  agreement_text:
-    'I understand that School of Transformation is a 9-month commitment running September through May. I agree to attend weekly sessions and complete assignments to the best of my ability. I understand there is a cost associated with the program.',
-}
+const inputClass = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent'
 
-type Props = {
-  existing: Record<string, string | boolean | null> | null
-  settings: Settings
+export default function QuestionnaireForm({
+  fields, initialAnswers, contact: initialContact, schoolYearName, preview = false,
+}: {
+  fields: AppField[]
+  initialAnswers: AnswerMap
+  contact: Contact
   schoolYearName: string
-}
-
-export default function QuestionnaireForm({ existing, settings, schoolYearName }: Props) {
+  /** Admin preview: fully interactive (branching included) but never persists or submits. */
+  preview?: boolean
+}) {
+  const [answers, setAnswers] = useState<AnswerMap>(initialAnswers)
+  const [contact, setContact] = useState<Contact>(initialContact)
+  const [stepIndex, setStepIndex] = useState(0)
+  const [stepError, setStepError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [pending, startTransition] = useTransition()
   const router = useRouter()
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
-  const q = { ...DEFAULTS, ...(settings || {}) }
+  const formSteps = useMemo(() => groupIntoSteps(fields), [fields])
+  // Step 0 is the fixed contact step; authored steps follow
+  const totalSteps = formSteps.length + 1
+  const isContactStep = stepIndex === 0
+  const currentStep = isContactStep ? null : formSteps[stepIndex - 1]
+  const isLastStep = stepIndex === totalSteps - 1
+  const progress = Math.round(((stepIndex + 1) / totalSteps) * 100)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSaving(true)
-    setError('')
-    const result = await saveQuestionnaire(new FormData(e.currentTarget))
-    if (result.error) {
-      setError(result.error)
-      setSaving(false)
-    } else {
-      router.push('/apply/reference')
-    }
+  // Debounced autosave — answers persist as the applicant types
+  function setAnswer(field: AppField, value: string | string[]) {
+    setAnswers(prev => ({ ...prev, [field.id]: value }))
+    if (preview) return
+    clearTimeout(saveTimers.current[field.id])
+    saveTimers.current[field.id] = setTimeout(() => {
+      setSaving(true)
+      saveAnswer(field.id, value).finally(() => setSaving(false))
+    }, 600)
   }
 
-  const val = (key: string) => (existing?.[key] as string) ?? ''
+  function flushContact() {
+    const fd = new FormData()
+    fd.set('full_name', contact.full_name)
+    fd.set('phone', contact.phone)
+    fd.set('city', contact.city)
+    return saveContactInfo(fd)
+  }
+
+  function validateCurrentStep(): string {
+    if (isContactStep) {
+      if (!contact.full_name.trim() || !contact.phone.trim() || !contact.city.trim()) {
+        return 'Please fill in your name, phone, and city.'
+      }
+      return ''
+    }
+    const missing = missingRequired(currentStep!.fields, answers)
+    if (missing.length > 0) {
+      return missing.length === 1
+        ? `Please answer: ${missing[0].label.slice(0, 80)}`
+        : `${missing.length} required questions still need an answer on this step.`
+    }
+    return ''
+  }
+
+  function goNext() {
+    const error = validateCurrentStep()
+    setStepError(error)
+    if (error) return
+    if (preview && isLastStep) {
+      setStepError('End of preview — submitting is disabled here.')
+      return
+    }
+    startTransition(async () => {
+      if (isContactStep && !preview) {
+        const result = await flushContact()
+        if (result.error) { setStepError(result.error); return }
+      }
+      if (isLastStep) {
+        const result = await submitQuestionnaire()
+        if (result.error) { setStepError(result.error); return }
+        router.push('/apply/reference')
+        return
+      }
+      setStepIndex(i => i + 1)
+      window.scrollTo({ top: 0 })
+    })
+  }
+
+  function goBack() {
+    setStepError('')
+    setStepIndex(i => Math.max(0, i - 1))
+    window.scrollTo({ top: 0 })
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Personal info */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">Personal information</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
-            <input name="full_name" type="text" required defaultValue={val('full_name')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <input name="phone" type="tel" defaultValue={val('phone')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-            <input name="city" type="text" defaultValue={val('city')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
-          </div>
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8">
+      {/* Progress */}
+      <div className="mb-6">
+        <div className="flex items-baseline justify-between mb-2">
+          <p className="text-xs text-gray-400">
+            Step {stepIndex + 1} of {totalSteps}
+            {' — '}
+            <span className="text-gray-600 font-medium">{isContactStep ? 'Contact information' : currentStep!.title}</span>
+          </p>
+          <p className="text-xs text-gray-300">{preview ? 'Preview — nothing is saved' : saving ? 'Saving…' : 'Saved automatically'}</p>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full bg-gray-900 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
-      {/* Essay questions */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
-        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">About you</h3>
-        <Essay name="q_testimony" required label={q.q_testimony_label} hint={q.q_testimony_hint} defaultValue={val('q_testimony')} />
-        <Essay name="q_why_attend" required label={q.q_why_attend_label} hint={q.q_why_attend_hint} defaultValue={val('q_why_attend')} />
-        <Essay name="q_goals" required label={q.q_goals_label} hint={q.q_goals_hint} defaultValue={val('q_goals')} />
-        <Essay name="q_serving" required label={q.q_serving_label} hint={q.q_serving_hint} defaultValue={val('q_serving')} />
-        <Essay name="q_additional" label={q.q_additional_label} hint={q.q_additional_hint} defaultValue={val('q_additional')} />
+      <p className="text-xs text-gray-400 mb-6">Applying for {schoolYearName}</p>
+
+      {/* Contact step */}
+      {isContactStep && (
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1.5">Full name <span className="text-red-400">*</span></label>
+            <input value={contact.full_name} onChange={e => setContact(c => ({ ...c, full_name: e.target.value }))} className={inputClass} autoComplete="name" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1.5">Phone <span className="text-red-400">*</span></label>
+            <input value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} className={inputClass} type="tel" autoComplete="tel" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1.5">City <span className="text-red-400">*</span></label>
+            <input value={contact.city} onChange={e => setContact(c => ({ ...c, city: e.target.value }))} className={inputClass} autoComplete="address-level2" />
+          </div>
+        </div>
+      )}
+
+      {/* Authored step */}
+      {!isContactStep && (
+        <div className="space-y-6">
+          {currentStep!.fields.map(field => {
+            if (!isVisible(field, answers)) return null
+
+            if (field.type === 'header') {
+              return <h2 key={field.id} className="text-lg font-semibold text-gray-900">{field.label}</h2>
+            }
+            if (field.type === 'note') {
+              return <p key={field.id} className="text-sm text-gray-500 whitespace-pre-line bg-gray-50 rounded-lg px-4 py-3">{field.label}</p>
+            }
+
+            const value = answers[field.id]
+            return (
+              <div key={field.id}>
+                <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                  {field.label} {field.required && <span className="text-red-400">*</span>}
+                </label>
+                {field.help_text && <p className="text-xs text-gray-400 mb-2 -mt-0.5">{field.help_text}</p>}
+
+                {field.type === 'short_text' && (
+                  <input value={(value as string) ?? ''} onChange={e => setAnswer(field, e.target.value)} className={inputClass} />
+                )}
+                {field.type === 'paragraph' && (
+                  <textarea value={(value as string) ?? ''} onChange={e => setAnswer(field, e.target.value)} rows={5} className={`${inputClass} resize-y`} />
+                )}
+                {field.type === 'yes_no' && (
+                  <div className="flex gap-2">
+                    {['Yes', 'No'].map(opt => (
+                      <button key={opt} type="button" onClick={() => setAnswer(field, opt)}
+                        className={`px-5 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                          value === opt ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                        }`}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {field.type === 'select' && (
+                  <select value={(value as string) ?? ''} onChange={e => setAnswer(field, e.target.value)} className={`${inputClass} bg-white`}>
+                    <option value="">Choose…</option>
+                    {(field.options ?? []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                )}
+                {field.type === 'checkbox_group' && (
+                  <div className="space-y-2">
+                    {(field.options ?? []).map(opt => {
+                      const list = Array.isArray(value) ? value : []
+                      const checked = list.includes(opt)
+                      return (
+                        <label key={opt} className="flex items-start gap-2.5 text-sm text-gray-700 cursor-pointer">
+                          <input type="checkbox" checked={checked}
+                            onChange={() => setAnswer(field, checked ? list.filter(v => v !== opt) : [...list, opt])}
+                            className="mt-0.5 rounded border-gray-300" />
+                          <span className="leading-relaxed">{opt}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {stepError && <p className="text-sm text-red-600 mt-5">{stepError}</p>}
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between mt-8 pt-5 border-t border-gray-100">
+        {stepIndex > 0 ? (
+          <button type="button" onClick={goBack} className="text-sm text-gray-400 hover:text-gray-700 transition-colors">← Back</button>
+        ) : <span />}
+        <button type="button" onClick={goNext} disabled={pending}
+          className="bg-gray-900 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50">
+          {pending ? 'Working…' : isLastStep ? 'Submit application →' : 'Continue →'}
+        </button>
       </div>
-
-      {/* Agreement */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Agreement</h3>
-        <p className="text-sm text-gray-600 mb-4">{q.agreement_text}</p>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            name="agreement"
-            required
-            defaultChecked={!!existing?.agreement_accepted}
-            className="mt-0.5 w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-          />
-          <span className="text-sm text-gray-700">I agree to the above</span>
-        </label>
-      </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full bg-gray-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
-      >
-        {saving ? 'Saving…' : 'Save & continue to Step 2 →'}
-      </button>
-    </form>
-  )
-}
-
-function Essay({ name, label, hint, required, defaultValue }: {
-  name: string; label: string; hint?: string; required?: boolean; defaultValue?: string
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
-      </label>
-      {hint && <p className="text-xs text-gray-400 mb-1">{hint}</p>}
-      <textarea
-        name={name}
-        required={required}
-        defaultValue={defaultValue}
-        rows={4}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-y"
-      />
     </div>
   )
 }

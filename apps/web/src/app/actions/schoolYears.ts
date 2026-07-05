@@ -46,16 +46,18 @@ export async function setActiveSchoolYear(schoolYearId: string): Promise<{ error
   const { error } = await admin.from('school_years').update({ is_active: true }).eq('id', schoolYearId)
   if (error) return { error: error.message }
 
-  // Enroll everyone accepted for this year. Applicants and returning alumni
-  // become students; admins/leaders are never downgraded.
-  const { data: approvedApps } = await admin
-    .from('applications')
-    .select('applicant_id')
-    .eq('school_year_id', schoolYearId)
-    .eq('status', 'approved')
+  // Enroll everyone accepted for this year WHO HAS PAID THEIR DEPOSIT.
+  // Applicants and returning alumni become students; admins/leaders are never
+  // downgraded. Accepted-but-unpaid applicants stay gated on the status page
+  // (promote manually from their profile if payment was handled offline).
+  const [{ data: approvedApps }, { data: paidAccounts }] = await Promise.all([
+    admin.from('applications').select('applicant_id').eq('school_year_id', schoolYearId).eq('status', 'approved'),
+    admin.from('billing_accounts').select('student_id').eq('school_year_id', schoolYearId).eq('deposit_paid', true),
+  ])
 
   let enrolled = 0
-  const applicantIds = (approvedApps ?? []).map(a => a.applicant_id)
+  const paidIds = new Set((paidAccounts ?? []).map(b => b.student_id))
+  const applicantIds = (approvedApps ?? []).map(a => a.applicant_id).filter(id => paidIds.has(id))
   if (applicantIds.length > 0) {
     const { data: promoted } = await admin
       .from('profiles')
