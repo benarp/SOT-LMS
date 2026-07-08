@@ -31,7 +31,7 @@ export default async function UsersPage() {
     { data: allYears },
     currentWeekResult,
   ] = await Promise.all([
-    admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id').order('full_name'),
+    admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday').order('full_name'),
     admin.from('applications').select('applicant_id, phone, city'),
     supabase.from('groups').select('id, name').eq('school_year_id', schoolYear?.id ?? '').order('name'),
     admin.from('school_years').select('id, name'),
@@ -115,6 +115,7 @@ export default async function UsersPage() {
       city: contact.city,
       role: p.role,
       alumniYear: p.alumni_year_id ? yearNameById.get(p.alumni_year_id) ?? null : null,
+      birthday: p.birthday ?? null,
       paymentStatus: p.role === 'student' ? (billingStatusByStudent.get(p.id) ?? 'Not started') : null,
       homeworkStatus: homeworkStatusMap[p.id] ?? null,
     }

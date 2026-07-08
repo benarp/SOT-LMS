@@ -259,7 +259,8 @@ async function guard(): Promise<{ ctx?: Awaited<ReturnType<typeof requireAdmin>>
 export async function updateUserProfile(
   userId: string,
   fullName: string,
-  email: string
+  email: string,
+  birthday?: string | null
 ): Promise<{ error?: string }> {
   const { ctx, error: authError } = await guard()
   if (!ctx) return { error: authError }
@@ -267,7 +268,7 @@ export async function updateUserProfile(
   const adminClient = getAdminClient()
 
   const { data: existing } = await adminClient
-    .from('profiles').select('email, full_name').eq('id', userId).single()
+    .from('profiles').select('email, full_name, birthday').eq('id', userId).single()
   if (!existing) return { error: 'User not found' }
 
   if (email !== existing.email) {
@@ -280,7 +281,7 @@ export async function updateUserProfile(
 
   const { error } = await adminClient
     .from('profiles')
-    .update({ full_name: fullName, email })
+    .update({ full_name: fullName, email, birthday: birthday || null })
     .eq('id', userId)
   if (error) return { error: error.message }
 
@@ -290,7 +291,7 @@ export async function updateUserProfile(
     action: 'profile_update',
     target_type: 'user',
     target_id: userId,
-    detail: { from: existing, to: { full_name: fullName, email } },
+    detail: { from: existing, to: { full_name: fullName, email, birthday: birthday || null } },
   })
 
   revalidatePath(`/admin/students/${userId}`)

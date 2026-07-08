@@ -15,6 +15,7 @@ export type UserRow = {
   alumniYear: string | null
   paymentStatus: string | null
   homeworkStatus: 'current' | 'late' | null
+  birthday: string | null // ISO date (YYYY-MM-DD)
 }
 
 type SortKey = keyof Omit<UserRow, 'id'>
@@ -44,12 +45,43 @@ function sortValue(row: UserRow, key: SortKey): string | number {
       return row.homeworkStatus ? order[row.homeworkStatus] : 2
     }
     case 'paymentStatus': return row.paymentStatus ?? 'zzz'
+    // Sort birthdays by month-day (year-agnostic), missing last
+    case 'birthday': return row.birthday ? row.birthday.slice(5) : '99-99'
     default: return (row[key] ?? '').toString().toLowerCase()
   }
 }
 
+// Birthday windows compare month-day only (the year on file doesn't matter)
+export type BirthdayWindow = 'all' | 'today' | 'week' | 'month' | 'nextMonth'
+
+function daysUntilBirthday(iso: string, today: Date): number {
+  const [, m, d] = iso.split('-').map(Number)
+  const next = new Date(today.getFullYear(), m - 1, d)
+  if (next < today) next.setFullYear(today.getFullYear() + 1)
+  return Math.round((next.getTime() - today.getTime()) / 86400000)
+}
+
+function inBirthdayWindow(iso: string | null, window: BirthdayWindow): boolean {
+  if (window === 'all') return true
+  if (!iso) return false
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const [, m] = iso.split('-').map(Number)
+  switch (window) {
+    case 'today': return daysUntilBirthday(iso, today) === 0
+    case 'week': return daysUntilBirthday(iso, today) <= 6
+    case 'month': return m - 1 === today.getMonth()
+    case 'nextMonth': return m - 1 === (today.getMonth() + 1) % 12
+  }
+}
+
+function formatBirthday(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  return new Date(2000, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 function downloadCSV(rows: UserRow[]) {
-  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'City', 'Role', 'Payment Status', 'Homework Status']
+  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'City', 'Birthday', 'Role', 'Payment Status', 'Homework Status']
   const lines = [
     headers.join(','),
     ...rows.map(r => [
@@ -58,6 +90,7 @@ function downloadCSV(rows: UserRow[]) {
       r.email,
       r.phone ?? '',
       r.city ?? '',
+      r.birthday ?? '',
       roleLabels[r.role] ?? r.role,
       r.paymentStatus ?? '—',
       r.homeworkStatus ? (r.homeworkStatus === 'current' ? 'Current' : 'Late') : '—',
@@ -78,6 +111,7 @@ const columns: { key: SortKey; label: string; minWidth?: string }[] = [
   { key: 'email', label: 'Email', minWidth: '180px' },
   { key: 'phone', label: 'Phone' },
   { key: 'city', label: 'City' },
+  { key: 'birthday', label: 'Birthday' },
   { key: 'paymentStatus', label: 'Payment' },
   { key: 'homeworkStatus', label: 'Homework' },
   { key: 'role', label: 'Role' },
@@ -88,6 +122,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('lastName')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [filterRole, setFilterRole] = useState<string>('all')
+  const [birthdayWindow, setBirthdayWindow] = useState<BirthdayWindow>('all')
   const [search, setSearch] = useState('')
 
   function handleSort(key: SortKey) {
@@ -102,6 +137,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
   const filtered = useMemo(() => {
     let rows = users
     if (filterRole !== 'all') rows = rows.filter(r => r.role === filterRole)
+    if (birthdayWindow !== 'all') rows = rows.filter(r => inBirthdayWindow(r.birthday, birthdayWindow))
     if (search) {
       const q = search.toLowerCase()
       rows = rows.filter(r =>
@@ -116,7 +152,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
       const cmp = av < bv ? -1 : av > bv ? 1 : 0
       return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [users, filterRole, search, sortKey, sortDir])
+  }, [users, filterRole, birthdayWindow, search, sortKey, sortDir])
 
   function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col) return <span className="ml-1 text-gray-300">↕</span>
@@ -191,6 +227,17 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
           <option value="applicant">Applicant</option>
           <option value="alumni">Alumni</option>
         </select>
+        <select
+          value={birthdayWindow}
+          onChange={e => setBirthdayWindow(e.target.value as BirthdayWindow)}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
+        >
+          <option value="all">Birthdays: any</option>
+          <option value="today">Birthday today</option>
+          <option value="week">Birthday this week</option>
+          <option value="month">Birthday this month</option>
+          <option value="nextMonth">Birthday next month</option>
+        </select>
         <span className="text-sm text-gray-400 ml-auto">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</span>
         <button
           onClick={() => downloadCSV(filtered)}
@@ -236,6 +283,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
                 <td className="px-4 py-3 text-gray-600">{user.email}</td>
                 <td className="px-4 py-3 text-gray-500">{user.phone ?? <span className="text-gray-300">—</span>}</td>
                 <td className="px-4 py-3 text-gray-500">{user.city ?? <span className="text-gray-300">—</span>}</td>
+                <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{user.birthday ? formatBirthday(user.birthday) : <span className="text-gray-300">—</span>}</td>
                 <td className="px-4 py-3"><PaymentBadge status={user.paymentStatus} /></td>
                 <td className="px-4 py-3"><HomeworkBadge status={user.homeworkStatus} /></td>
                 <td className="px-4 py-3"><RoleBadge role={user.role} alumniYear={user.alumniYear} /></td>
@@ -246,7 +294,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">
+                <td colSpan={10} className="px-4 py-10 text-center text-sm text-gray-400">
                   No users found.
                 </td>
               </tr>

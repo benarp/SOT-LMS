@@ -17,6 +17,7 @@ create table profiles (
   email text not null,
   role user_role not null default 'student',
   group_id uuid, -- assigned after groups are created
+  birthday date,
   created_at timestamptz not null default now()
 );
 
@@ -90,6 +91,8 @@ create table submissions (
   homework_item_id uuid not null references homework_items on delete cascade,
   completed_at timestamptz not null default now(),
   is_late boolean not null default false,
+  response_file_path text,  -- journal photo/PDF in the homework-uploads bucket
+  response_file_name text,
   unique (student_id, homework_item_id)
 );
 

@@ -17,7 +17,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   const [{ data: profile }, authUserResult, { data: application }, { data: schoolYear }] =
     await Promise.all([
-      admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id').eq('id', id).single(),
+      admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday').eq('id', id).single(),
       admin.auth.admin.getUserById(id),
       admin.from('applications').select('phone, city').eq('applicant_id', id).maybeSingle(),
       supabase.from('school_years').select('id, name').eq('is_active', true).single(),
@@ -112,6 +112,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               userId={profile.id}
               initialName={profile.full_name ?? ''}
               initialEmail={profile.email}
+              initialBirthday={profile.birthday ?? null}
             />
             {(application?.phone || application?.city) && (
               <p className="text-xs text-gray-400 mt-3">

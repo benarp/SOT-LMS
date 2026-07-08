@@ -7,25 +7,28 @@ export default function EditProfileForm({
   userId,
   initialName,
   initialEmail,
+  initialBirthday,
 }: {
   userId: string
   initialName: string
   initialEmail: string
+  initialBirthday: string | null
 }) {
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
+  const [birthday, setBirthday] = useState(initialBirthday ?? '')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  const dirty = name !== initialName || email !== initialEmail
+  const dirty = name !== initialName || email !== initialEmail || birthday !== (initialBirthday ?? '')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setSaved(false)
     startTransition(async () => {
-      const result = await updateUserProfile(userId, name.trim(), email.trim())
+      const result = await updateUserProfile(userId, name.trim(), email.trim(), birthday || null)
       if (result.error) {
         setError(result.error)
       } else {
@@ -59,6 +62,16 @@ export default function EditProfileForm({
         {email !== initialEmail && (
           <p className="text-xs text-amber-600 mt-1">Changing the email also changes how they sign in.</p>
         )}
+      </div>
+      <div>
+        <label htmlFor="profile-birthday" className="block text-xs font-medium text-gray-500 mb-1">Birthday <span className="text-gray-400">(optional)</span></label>
+        <input
+          id="profile-birthday"
+          type="date"
+          value={birthday}
+          onChange={e => { setBirthday(e.target.value); setSaved(false) }}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+        />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {saved && <p className="text-sm text-green-600">Saved.</p>}

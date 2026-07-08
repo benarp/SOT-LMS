@@ -11,6 +11,9 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [originalName, setOriginalName] = useState('')
+  const [birthday, setBirthday] = useState('')
+  const [originalBirthday, setOriginalBirthday] = useState('')
+  const [birthdayStatus, setBirthdayStatus] = useState<Status>(null)
   const [email, setEmail] = useState('')
   const [originalEmail, setOriginalEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -18,7 +21,7 @@ export default function AccountPage() {
   const [nameStatus, setNameStatus] = useState<Status>(null)
   const [emailStatus, setEmailStatus] = useState<Status>(null)
   const [passwordStatus, setPasswordStatus] = useState<Status>(null)
-  const [saving, setSaving] = useState<'name' | 'email' | 'password' | null>(null)
+  const [saving, setSaving] = useState<'name' | 'email' | 'password' | 'birthday' | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -26,11 +29,13 @@ export default function AccountPage() {
       if (!user) return
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, birthday')
         .eq('id', user.id)
         .single()
       setName(profile?.full_name ?? '')
       setOriginalName(profile?.full_name ?? '')
+      setBirthday(profile?.birthday ?? '')
+      setOriginalBirthday(profile?.birthday ?? '')
       setEmail(user.email ?? '')
       setOriginalEmail(user.email ?? '')
       setLoading(false)
@@ -48,6 +53,17 @@ export default function AccountPage() {
     if (error) { setNameStatus({ kind: 'error', message: error.message }); return }
     setOriginalName(name.trim())
     setNameStatus({ kind: 'success', message: 'Name updated.' })
+  }
+
+  async function saveBirthday(e: React.FormEvent) {
+    e.preventDefault()
+    setBirthdayStatus(null)
+    setSaving('birthday')
+    const { error } = await supabase.rpc('update_own_birthday', { new_birthday: birthday || null })
+    setSaving(null)
+    if (error) { setBirthdayStatus({ kind: 'error', message: error.message }); return }
+    setOriginalBirthday(birthday)
+    setBirthdayStatus({ kind: 'success', message: 'Birthday saved.' })
   }
 
   async function saveEmail(e: React.FormEvent) {
@@ -120,6 +136,20 @@ export default function AccountPage() {
         {name.trim() !== originalName && name.trim().length > 0 && (
           <button type="submit" disabled={saving === 'name'} className={buttonClass}>
             {saving === 'name' ? 'Saving…' : 'Save name'}
+          </button>
+        )}
+      </form>
+
+      <form onSubmit={saveBirthday} className="bg-white border border-gray-200 rounded-xl p-6 mb-5 space-y-4">
+        <div>
+          <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-1">Birthday</label>
+          <input id="birthday" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} className={inputClass} autoComplete="bday" />
+          <p className="text-xs text-gray-400 mt-2">So the school can celebrate you. Only staff can see it.</p>
+        </div>
+        <StatusLine status={birthdayStatus} />
+        {birthday !== originalBirthday && (
+          <button type="submit" disabled={saving === 'birthday'} className={buttonClass}>
+            {saving === 'birthday' ? 'Saving…' : 'Save birthday'}
           </button>
         )}
       </form>
