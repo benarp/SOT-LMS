@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   RefreshControl, ActivityIndicator, Alert,
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { fetchOpenAssignments, adjustOpenCount, type OpenWeek } from '../../lib/openAssignments'
+import { useTheme, type ThemeColors } from '../../lib/theme'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -17,6 +18,8 @@ const typeLabels: Record<string, string> = {
 
 export default function OpenAssignmentsScreen() {
   const router = useRouter()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
   const [weeks, setWeeks] = useState<OpenWeek[]>([])
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(true)
@@ -60,7 +63,7 @@ export default function OpenAssignmentsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator color="#111827" />
+        <ActivityIndicator color={colors.text} />
       </SafeAreaView>
     )
   }
@@ -71,7 +74,7 @@ export default function OpenAssignmentsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor="#111827" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={colors.text} />}
       >
         <Text style={styles.heading}>Open assignments</Text>
         <Text style={styles.subheading}>
@@ -126,23 +129,23 @@ export default function OpenAssignmentsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
-  heading: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  subheading: { fontSize: 13, color: '#9ca3af', marginBottom: 20 },
+  heading: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  subheading: { fontSize: 13, color: colors.textFaint, marginBottom: 20 },
   weekSection: { marginBottom: 24 },
   weekHeader: { marginBottom: 10 },
-  weekLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 2 },
-  weekDue: { fontSize: 12, color: '#9ca3af' },
-  weekOverdue: { color: '#ef4444', fontWeight: '600' },
+  weekLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 2 },
+  weekDue: { fontSize: 12, color: colors.textFaint },
+  weekOverdue: { color: colors.danger, fontWeight: '600' },
   itemsList: { gap: 8 },
   itemCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 14,
     flexDirection: 'row',
     gap: 12,
@@ -153,14 +156,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.borderStrong,
     flexShrink: 0,
   },
   itemContent: { flex: 1 },
-  itemType: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 },
-  itemTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  chevron: { fontSize: 20, color: '#d1d5db', marginLeft: 4 },
+  itemType: { fontSize: 11, color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 },
+  itemTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+  chevron: { fontSize: 20, color: colors.borderStrong, marginLeft: 4 },
   allDoneBox: { alignItems: 'center', marginTop: 60 },
   allDoneEmoji: { fontSize: 40, marginBottom: 10 },
-  allDoneText: { fontSize: 15, fontWeight: '600', color: '#16a34a' },
+  allDoneText: { fontSize: 15, fontWeight: '600', color: colors.success },
 })

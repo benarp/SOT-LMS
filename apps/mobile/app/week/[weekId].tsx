@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../lib/supabase'
+import { useTheme, type ThemeColors } from '../../lib/theme'
 
 type Item = {
   id: string
@@ -29,6 +30,8 @@ export default function WeekDetailScreen() {
   const [weekNumber, setWeekNumber] = useState(0)
   const [dueDate, setDueDate] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   useEffect(() => {
     async function load() {
@@ -65,7 +68,7 @@ export default function WeekDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator color="#111827" />
+        <ActivityIndicator color={colors.text} />
       </SafeAreaView>
     )
   }
@@ -111,43 +114,43 @@ export default function WeekDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
-  weekLabel: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  weekTitle: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  dueDate: { fontSize: 13, color: '#9ca3af', marginBottom: 24 },
+  weekLabel: { fontSize: 11, color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  weekTitle: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  dueDate: { fontSize: 13, color: colors.textFaint, marginBottom: 24 },
   list: { gap: 10 },
   itemCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 16,
     flexDirection: 'row',
     gap: 14,
     alignItems: 'flex-start',
   },
-  itemCardDone: { borderColor: '#f3f4f6' },
+  itemCardDone: { borderColor: colors.borderSubtle },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
     flexShrink: 0,
   },
-  checkboxDone: { backgroundColor: '#111827', borderColor: '#111827' },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '700', lineHeight: 14 },
+  checkboxDone: { backgroundColor: colors.accent, borderColor: colors.accent },
+  checkmark: { color: colors.accentText, fontSize: 12, fontWeight: '700', lineHeight: 14 },
   itemContent: { flex: 1 },
-  itemType: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
-  itemTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  itemTitleDone: { color: '#9ca3af', textDecorationLine: 'line-through' },
-  itemDesc: { fontSize: 13, color: '#6b7280', marginTop: 3, lineHeight: 18 },
-  submittedAt: { fontSize: 12, color: '#16a34a', marginTop: 6 },
-  late: { color: '#f59e0b' },
+  itemType: { fontSize: 11, color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
+  itemTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+  itemTitleDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
+  itemDesc: { fontSize: 13, color: colors.textMuted, marginTop: 3, lineHeight: 18 },
+  submittedAt: { fontSize: 12, color: colors.success, marginTop: 6 },
+  late: { color: colors.warning },
 })

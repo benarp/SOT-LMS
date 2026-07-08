@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router'
 import { ColorValue } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { useOpenCount, fetchOpenAssignments } from '../../lib/openAssignments'
+import { useTheme } from '../../lib/theme'
 
 function HomeIcon({ color }: { color: ColorValue }) {
   return (
@@ -30,6 +31,7 @@ function HistoryIcon({ color }: { color: ColorValue }) {
 
 export default function TabsLayout() {
   const openCount = useOpenCount()
+  const { colors } = useTheme()
 
   // Populate the badge on app start, before the Open tab is ever visited.
   // Best-effort: a failed fetch just means no badge until the next load.
@@ -41,11 +43,11 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#111827',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.textFaint,
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#f3f4f6',
+          backgroundColor: colors.surface,
+          borderTopColor: colors.borderSubtle,
           borderTopWidth: 1,
           paddingTop: 4,
         },
@@ -62,7 +64,7 @@ export default function TabsLayout() {
           title: 'Open',
           tabBarIcon: ({ color }) => <ChecklistIcon color={color} />,
           tabBarBadge: openCount > 0 ? openCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 11 },
+          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 11 },
         }}
       />
       <Tabs.Screen

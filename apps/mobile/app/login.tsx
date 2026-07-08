@@ -1,14 +1,17 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native'
 import { supabase } from '../lib/supabase'
+import { useTheme, type ThemeColors } from '../lib/theme'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   async function handleSignIn() {
     if (!email || !password) {
@@ -40,7 +43,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
             textContentType="emailAddress"
             placeholder="you@example.com"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.placeholder}
           />
 
           <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
@@ -51,7 +54,7 @@ export default function LoginScreen() {
             secureTextEntry
             textContentType="password"
             placeholder="••••••••"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.placeholder}
             onSubmitEditing={handleSignIn}
             returnKeyType="done"
           />
@@ -62,7 +65,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color={colors.accentText} />
               : <Text style={styles.buttonText}>Sign in</Text>
             }
           </TouchableOpacity>
@@ -72,31 +75,31 @@ export default function LoginScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
   header: { marginBottom: 40 },
-  school: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#9ca3af' },
+  school: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: colors.textFaint },
   form: {},
-  label: { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: '500', color: colors.textSecondary, marginBottom: 6 },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 15,
-    color: '#111827',
+    color: colors.text,
   },
   button: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 24,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  buttonText: { color: colors.accentText, fontWeight: '600', fontSize: 15 },
 })

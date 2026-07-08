@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   RefreshControl, ActivityIndicator, Alert,
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { adjustOpenCount } from '../../lib/openAssignments'
+import { useTheme, type ThemeColors } from '../../lib/theme'
 
 type HomeworkItem = {
   id: string
@@ -29,6 +30,8 @@ const typeLabels: Record<string, string> = {
 
 export default function ThisWeekScreen() {
   const router = useRouter()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [items, setItems] = useState<HomeworkItem[]>([])
@@ -125,7 +128,7 @@ export default function ThisWeekScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator color="#111827" />
+        <ActivityIndicator color={colors.text} />
       </SafeAreaView>
     )
   }
@@ -138,7 +141,7 @@ export default function ThisWeekScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor="#111827" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={colors.text} />}
       >
         {/* Header */}
         <View style={styles.topRow}>
@@ -229,68 +232,68 @@ export default function ThisWeekScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  schoolName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  signOut: { fontSize: 13, color: '#9ca3af' },
+  schoolName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  signOut: { fontSize: 13, color: colors.textFaint },
   announcement: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: colors.infoBg,
     borderLeftWidth: 3,
-    borderLeftColor: '#3b82f6',
+    borderLeftColor: colors.info,
     borderRadius: 10,
     padding: 14,
     marginBottom: 10,
   },
-  announcementTitle: { fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 3 },
-  announcementBody: { fontSize: 13, color: '#1d4ed8', lineHeight: 18 },
+  announcementTitle: { fontSize: 13, fontWeight: '600', color: colors.infoStrong, marginBottom: 3 },
+  announcementBody: { fontSize: 13, color: colors.infoStrong, lineHeight: 18 },
   weekHeader: { marginBottom: 20 },
-  weekLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  weekTitle: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  dueDate: { fontSize: 13, color: '#9ca3af' },
-  overdue: { color: '#ef4444' },
+  weekLabel: { fontSize: 12, color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  weekTitle: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  dueDate: { fontSize: 13, color: colors.textFaint },
+  overdue: { color: colors.danger },
   progressSection: { marginBottom: 20 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressText: { fontSize: 13, color: '#6b7280' },
-  allDone: { fontSize: 13, fontWeight: '600', color: '#16a34a' },
-  progressTrack: { height: 5, backgroundColor: '#e5e7eb', borderRadius: 99, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#111827', borderRadius: 99 },
+  progressText: { fontSize: 13, color: colors.textMuted },
+  allDone: { fontSize: 13, fontWeight: '600', color: colors.success },
+  progressTrack: { height: 5, backgroundColor: colors.border, borderRadius: 99, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 99 },
   itemsList: { gap: 10 },
   itemCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 16,
     flexDirection: 'row',
     gap: 14,
     alignItems: 'flex-start',
   },
-  itemCardDone: { borderColor: '#f3f4f6' },
+  itemCardDone: { borderColor: colors.borderSubtle },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
     flexShrink: 0,
   },
-  checkboxDone: { backgroundColor: '#111827', borderColor: '#111827' },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '700', lineHeight: 14 },
+  checkboxDone: { backgroundColor: colors.accent, borderColor: colors.accent },
+  checkmark: { color: colors.accentText, fontSize: 12, fontWeight: '700', lineHeight: 14 },
   itemContent: { flex: 1 },
-  itemType: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
-  itemTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  itemTitleDone: { color: '#9ca3af', textDecorationLine: 'line-through' },
-  itemDesc: { fontSize: 13, color: '#6b7280', marginTop: 3, lineHeight: 18 },
-  chevron: { fontSize: 20, color: '#d1d5db', alignSelf: 'center', marginLeft: 4 },
-  empty: { fontSize: 14, color: '#9ca3af', textAlign: 'center', marginTop: 40 },
+  itemType: { fontSize: 11, color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
+  itemTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+  itemTitleDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
+  itemDesc: { fontSize: 13, color: colors.textMuted, marginTop: 3, lineHeight: 18 },
+  chevron: { fontSize: 20, color: colors.borderStrong, alignSelf: 'center', marginLeft: 4 },
+  empty: { fontSize: 14, color: colors.textFaint, textAlign: 'center', marginTop: 40 },
   alumniBox: { alignItems: 'center', marginTop: 80, paddingHorizontal: 20 },
   alumniEmoji: { fontSize: 44, marginBottom: 14 },
-  alumniTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  alumniText: { fontSize: 14, color: '#6b7280', textAlign: 'center', lineHeight: 21 },
+  alumniTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  alumniText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 21 },
 })

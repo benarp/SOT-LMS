@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator,
   TouchableOpacity, Alert, Dimensions, TextInput,
@@ -9,6 +9,7 @@ import { useLocalSearchParams } from 'expo-router'
 import { WebView } from 'react-native-webview'
 import { supabase } from '../../lib/supabase'
 import { adjustOpenCount } from '../../lib/openAssignments'
+import { useTheme, type ThemeColors } from '../../lib/theme'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const VIDEO_HEIGHT = Math.round((SCREEN_WIDTH - 32) * 9 / 16)
@@ -58,6 +59,8 @@ export default function ItemDetailScreen() {
   const [userId, setUserId] = useState('')
   const [responseDraft, setResponseDraft] = useState('')
   const [savingResponse, setSavingResponse] = useState(false)
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   useEffect(() => {
     async function load() {
@@ -143,7 +146,7 @@ export default function ItemDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator color="#111827" />
+        <ActivityIndicator color={colors.text} />
       </SafeAreaView>
     )
   }
@@ -228,7 +231,7 @@ export default function ItemDetailScreen() {
               onChangeText={setResponseDraft}
               multiline
               placeholder="Write your response here…"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={colors.placeholder}
               textAlignVertical="top"
             />
             <TouchableOpacity
@@ -238,7 +241,7 @@ export default function ItemDetailScreen() {
               activeOpacity={0.8}
             >
               {savingResponse
-                ? <ActivityIndicator color="#fff" size="small" />
+                ? <ActivityIndicator color={colors.accentText} size="small" />
                 : <Text style={styles.completeBtnText}>{item.completed ? 'Update response' : 'Save response'}</Text>
               }
             </TouchableOpacity>
@@ -257,8 +260,8 @@ export default function ItemDetailScreen() {
             activeOpacity={0.8}
           >
             {completing
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.completeBtnText}>{item.completed ? '✓ Completed' : 'Mark complete'}</Text>
+              ? <ActivityIndicator color={colors.accentText} size="small" />
+              : <Text style={[styles.completeBtnText, item.completed && styles.completeBtnTextDone]}>{item.completed ? '✓ Completed' : 'Mark complete'}</Text>
             }
           </TouchableOpacity>
         )}
@@ -268,65 +271,69 @@ export default function ItemDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { padding: 20, paddingBottom: 48 },
-  typeLabel: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 },
-  title: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 8, lineHeight: 28 },
-  description: { fontSize: 14, color: '#6b7280', lineHeight: 20, marginBottom: 20 },
+  typeLabel: { fontSize: 11, color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 8, lineHeight: 28 },
+  description: { fontSize: 14, color: colors.textMuted, lineHeight: 20, marginBottom: 20 },
   videoContainer: {
     borderRadius: 14,
     overflow: 'hidden',
     marginTop: 8,
     marginBottom: 10,
-    backgroundColor: '#000',
+    backgroundColor: colors.videoBg,
   },
-  attribution: { fontSize: 12, color: '#9ca3af', lineHeight: 17, marginBottom: 16 },
-  attributionLink: { color: '#3b82f6', textDecorationLine: 'underline' },
+  attribution: { fontSize: 12, color: colors.textFaint, lineHeight: 17, marginBottom: 16 },
+  attributionLink: { color: colors.info, textDecorationLine: 'underline' },
   daysContainer: {
     marginTop: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 16,
     gap: 12,
   },
   dayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  dayDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#111827', marginTop: 6, flexShrink: 0 },
-  dayText: { fontSize: 14, color: '#374151', lineHeight: 22, flex: 1 },
-  reflectionDone: { fontSize: 13, color: '#16a34a', fontWeight: '600', textAlign: 'center', marginTop: 14 },
+  dayDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent, marginTop: 6, flexShrink: 0 },
+  dayText: { fontSize: 14, color: colors.textSecondary, lineHeight: 22, flex: 1 },
+  reflectionDone: { fontSize: 13, color: colors.success, fontWeight: '600', textAlign: 'center', marginTop: 14 },
   writtenBox: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 16,
     marginTop: 16,
   },
-  writtenText: { fontSize: 14, color: '#374151', lineHeight: 22 },
+  writtenText: { fontSize: 14, color: colors.textSecondary, lineHeight: 22 },
   responseInput: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 16,
     marginTop: 16,
     minHeight: 140,
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
     lineHeight: 21,
   },
   completeBtn: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.accent,
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
     marginTop: 28,
   },
-  completeBtnDone: { backgroundColor: '#d1fae5', },
+  // Fix: the previous version kept white button text over this pale-green
+  // "done" background, which was hard to read — completeBtnTextDone below
+  // swaps in a color that actually contrasts against successSoftBg.
+  completeBtnDone: { backgroundColor: colors.successSoftBg },
+  completeBtnTextDone: { color: colors.successSoftText },
   completeBtnDisabled: { opacity: 0.6 },
-  completeBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  empty: { color: '#9ca3af', fontSize: 14 },
+  completeBtnText: { color: colors.accentText, fontSize: 15, fontWeight: '600' },
+  empty: { color: colors.textFaint, fontSize: 14 },
 })

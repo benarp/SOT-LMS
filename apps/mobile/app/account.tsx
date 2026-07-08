@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   TextInput, Alert, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
+import { useTheme, type ThemeColors, type ThemePref } from '../lib/theme'
+
+const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+]
 
 export default function AccountScreen() {
   const [loading, setLoading] = useState(true)
@@ -17,6 +24,8 @@ export default function AccountScreen() {
   const [savingName, setSavingName] = useState(false)
   const [savingEmail, setSavingEmail] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const { colors, pref, setPref } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   useEffect(() => {
     async function load() {
@@ -87,7 +96,7 @@ export default function AccountScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator color="#111827" />
+        <ActivityIndicator color={colors.text} />
       </SafeAreaView>
     )
   }
@@ -96,6 +105,26 @@ export default function AccountScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.heading}>Account</Text>
+
+        {/* Appearance */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Appearance</Text>
+          <Text style={styles.hint}>&quot;System&quot; follows your phone&apos;s settings.</Text>
+          <View style={styles.themeRow}>
+            {THEME_OPTIONS.map(opt => {
+              const active = pref === opt.value
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.themePill, active && styles.themePillActive]}
+                  onPress={() => setPref(opt.value)}
+                >
+                  <Text style={[styles.themePillText, active && styles.themePillTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
 
         {/* Name */}
         <View style={styles.section}>
@@ -106,6 +135,7 @@ export default function AccountScreen() {
             onChangeText={setName}
             autoCapitalize="words"
             autoComplete="name"
+            placeholderTextColor={colors.placeholder}
           />
           {name.trim() !== originalName && name.trim().length > 0 && (
             <TouchableOpacity style={styles.saveBtn} onPress={saveName} disabled={savingName}>
@@ -124,6 +154,7 @@ export default function AccountScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
+            placeholderTextColor={colors.placeholder}
           />
           <Text style={styles.hint}>Changing your email sends a confirmation link to the new address.</Text>
           {email.trim().toLowerCase() !== originalEmail && email.trim().length > 0 && (
@@ -141,7 +172,7 @@ export default function AccountScreen() {
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="New password"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.placeholder}
             secureTextEntry
             autoComplete="new-password"
           />
@@ -150,7 +181,7 @@ export default function AccountScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Confirm new password"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.placeholder}
             secureTextEntry
             autoComplete="new-password"
           />
@@ -170,46 +201,59 @@ export default function AccountScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { padding: 20, paddingBottom: 48 },
-  heading: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 20 },
+  heading: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 20 },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 16,
     marginBottom: 14,
   },
-  label: { fontSize: 12, fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },
+  label: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#fff',
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
-  hint: { fontSize: 12, color: '#9ca3af', marginTop: 8, lineHeight: 16 },
+  hint: { fontSize: 12, color: colors.textFaint, marginTop: 8, lineHeight: 16 },
   saveBtn: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.accent,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 12,
   },
-  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  saveBtnText: { color: colors.accentText, fontSize: 14, fontWeight: '600' },
   signOutBtn: {
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: colors.dangerBorder,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 10,
   },
-  signOutText: { color: '#dc2626', fontSize: 15, fontWeight: '600' },
+  signOutText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
+  themeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  themePill: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 9,
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  themePillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  themePillText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  themePillTextActive: { color: colors.accentText },
 })

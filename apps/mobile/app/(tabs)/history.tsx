@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   RefreshControl, ActivityIndicator,
@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
+import { useTheme, type ThemeColors } from '../../lib/theme'
 
 type Week = {
   id: string
@@ -21,6 +22,8 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const router = useRouter()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -67,7 +70,7 @@ export default function HistoryScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator color="#111827" />
+        <ActivityIndicator color={colors.text} />
       </SafeAreaView>
     )
   }
@@ -76,7 +79,7 @@ export default function HistoryScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor="#111827" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={colors.text} />}
       >
         <Text style={styles.heading}>Previous weeks</Text>
 
@@ -109,8 +112,8 @@ export default function HistoryScreen() {
                         Due {new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </Text>
                     </View>
-                    <View style={styles.badge(allDone)}>
-                      <Text style={styles.badgeText(allDone)}>
+                    <View style={badgeStyle(colors, allDone)}>
+                      <Text style={badgeTextStyle(colors, allDone)}>
                         {allDone ? '✓ Complete' : `${week.completedCount}/${week.totalCount} done`}
                       </Text>
                     </View>
@@ -130,58 +133,66 @@ export default function HistoryScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
-  heading: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 20 },
-  list: { gap: 10 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 16,
-  },
-  cardTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 12 },
-  weekLabel: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 },
-  weekTitle: { fontSize: 15, fontWeight: '600', color: '#111827', marginBottom: 3 },
-  dueDate: { fontSize: 12, color: '#9ca3af' },
-  badge: (done: boolean) => ({
-    backgroundColor: done ? '#f0fdf4' : '#fffbeb',
+function badgeStyle(colors: ThemeColors, done: boolean) {
+  return {
+    backgroundColor: done ? colors.successBg : colors.warningBg,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: done ? '#bbf7d0' : '#fde68a',
-    alignSelf: 'flex-start',
-  }),
-  badgeText: (done: boolean) => ({
+    borderColor: done ? colors.successBorder : colors.warningBorder,
+    alignSelf: 'flex-start' as const,
+  }
+}
+
+function badgeTextStyle(colors: ThemeColors, done: boolean) {
+  return {
     fontSize: 12,
-    fontWeight: '600',
-    color: done ? '#16a34a' : '#b45309',
-  }),
+    fontWeight: '600' as const,
+    color: done ? colors.success : colors.warningStrong,
+  }
+}
+
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
+  heading: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 20 },
+  list: { gap: 10 },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+  },
+  cardTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 12 },
+  weekLabel: { fontSize: 11, color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 },
+  weekTitle: { fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 3 },
+  dueDate: { fontSize: 12, color: colors.textFaint },
   checkCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
     flexShrink: 0,
   },
-  checkCircleMark: { color: '#fff', fontSize: 13, fontWeight: '700', lineHeight: 15 },
+  // colors.background (not surface) — stays legible against the saturated
+  // green circle in both themes, since it's the lightest/darkest extreme
+  checkCircleMark: { color: colors.background, fontSize: 13, fontWeight: '700', lineHeight: 15 },
   openCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#fbbf24',
+    borderColor: colors.warning,
     marginTop: 2,
     flexShrink: 0,
   },
-  progressTrack: { height: 4, backgroundColor: '#e5e7eb', borderRadius: 99, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#16a34a', borderRadius: 99 },
-  empty: { fontSize: 14, color: '#9ca3af', textAlign: 'center', marginTop: 40 },
-} as any)
+  progressTrack: { height: 4, backgroundColor: colors.border, borderRadius: 99, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 99 },
+  empty: { fontSize: 14, color: colors.textFaint, textAlign: 'center', marginTop: 40 },
+})
