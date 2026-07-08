@@ -67,7 +67,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const { data: billingEvents } = billingAccount
     ? await admin
         .from('billing_events')
-        .select('id, type, amount_cents, stripe_object_id, notes, created_at')
+        .select('id, type, amount_cents, stripe_object_id, notes, payment_method, received_by, paid_at, created_at')
         .eq('billing_account_id', billingAccount.id)
         .order('created_at', { ascending: false })
     : { data: [] }
@@ -153,10 +153,16 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               <h2 className="text-sm font-medium text-gray-700 mb-3">
                 Billing — {schoolYear?.name ?? 'no active year'}
               </h2>
-              <BillingPanel
-                account={billingAccount ? { ...billingAccount, outstanding_cents: outstandingCents(billingAccount) } : null}
-                events={billingEvents ?? []}
-              />
+              {schoolYear ? (
+                <BillingPanel
+                  account={billingAccount ? { ...billingAccount, outstanding_cents: outstandingCents(billingAccount) } : null}
+                  events={billingEvents ?? []}
+                  studentId={profile.id}
+                  schoolYearId={schoolYear.id}
+                />
+              ) : (
+                <p className="text-sm text-gray-400">No active school year — billing is tied to a year.</p>
+              )}
             </section>
           )}
         </div>

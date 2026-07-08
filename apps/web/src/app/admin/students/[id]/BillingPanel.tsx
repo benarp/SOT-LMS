@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { pausePayments, resumePayments, applyCredit, cancelBilling, issueRefund } from '@/app/actions/billing'
+import { pausePayments, resumePayments, applyCredit, cancelBilling, issueRefund, recordOfflinePayment } from '@/app/actions/billing'
 import { BILLING_STATUS_LABELS } from '@/lib/billing'
 
 type Account = {
@@ -21,6 +21,9 @@ type BillingEvent = {
   amount_cents: number | null
   stripe_object_id: string | null
   notes: string | null
+  payment_method: string | null
+  received_by: string | null
+  paid_at: string | null
   created_at: string
 }
 
@@ -34,6 +37,7 @@ const eventLabels: Record<string, string> = {
   cancelled: 'Billing cancelled',
   completed: 'Paid in full',
   refund_issued: 'Refund issued',
+  offline_payment: 'Cash/check payment',
 }
 
 const statusStyles: Record<string, string> = {
@@ -50,22 +54,19 @@ function dollars(cents: number | null): string {
   return (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
-export default function BillingPanel({ account, events }: { account: Account | null; events: BillingEvent[] }) {
-  const [mode, setMode] = useState<'none' | 'credit' | 'refund'>('none')
+export default function BillingPanel({
+  account, events, studentId, schoolYearId,
+}: {
+  account: Account | null
+  events: BillingEvent[]
+  studentId: string
+  schoolYearId: string
+}) {
+  const [mode, setMode] = useState<'none' | 'credit' | 'refund' | 'offline'>('none')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [pending, startTransition] = useTransition()
   const router = useRouter()
-
-  if (!account) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <p className="text-sm text-gray-400">
-          No billing account yet — it&apos;s created when the student starts payment setup from their Tuition page.
-        </p>
-      </div>
-    )
-  }
 
   function run(fn: () => Promise<{ error?: string }>, confirmMsg?: string) {
     if (confirmMsg && !confirm(confirmMsg)) return
@@ -75,6 +76,58 @@ export default function BillingPanel({ account, events }: { account: Account | n
       if (result.error) setError(result.error)
       else { setNotice('Done.'); setMode('none'); router.refresh() }
     })
+  }
+
+  function submitOfflinePayment(fd: FormData) {
+    run(() => recordOfflinePayment(
+      studentId,
+      schoolYearId,
+      parseFloat(fd.get('amount') as string),
+      fd.get('method') as 'cash' | 'check',
+      fd.get('paidAt') as string,
+      fd.get('receivedBy') as string,
+      fd.get('notes') as string
+    ))
+  }
+
+  const offlineForm = (
+    <form className="bg-gray-50 rounded-lg p-3 space-y-2" onSubmit={e => { e.preventDefault(); submitOfflinePayment(new FormData(e.currentTarget)) }}>
+      <div className="flex gap-2">
+        <select name="method" required defaultValue="cash" className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900">
+          <option value="cash">Cash</option>
+          <option value="check">Check</option>
+        </select>
+        <input name="amount" type="number" min="1" step="0.01" required placeholder="Amount (e.g. 200)"
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+      </div>
+      <div className="flex gap-2">
+        <input name="paidAt" type="date" required defaultValue={new Date().toISOString().slice(0, 10)}
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+        <input name="receivedBy" required placeholder="Received by (name)"
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+      </div>
+      <input name="notes" placeholder="Note, e.g. check #1234 (optional)"
+        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+      <button type="submit" disabled={pending} className="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50">
+        {pending ? 'Recording…' : 'Record payment'}
+      </button>
+    </form>
+  )
+
+  if (!account) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+        <p className="text-sm text-gray-400">
+          No billing account yet — it&apos;s created automatically when the student starts payment setup, or when you record a cash/check payment below.
+        </p>
+        {mode === 'offline' ? offlineForm : (
+          <button onClick={() => setMode('offline')} className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-400">
+            Record cash/check payment
+          </button>
+        )}
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+    )
   }
 
   const refundableEvents = events.filter(e =>
@@ -119,6 +172,10 @@ export default function BillingPanel({ account, events }: { account: Account | n
           <button onClick={() => setMode(mode === 'refund' ? 'none' : 'refund')} disabled={pending}
             className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-400 disabled:opacity-50">Refund</button>
         )}
+        {account.status !== 'cancelled' && account.status !== 'completed' && (
+          <button onClick={() => setMode(mode === 'offline' ? 'none' : 'offline')} disabled={pending}
+            className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-400 disabled:opacity-50">Record cash/check payment</button>
+        )}
         {account.status !== 'pending' && account.status !== 'cancelled' && account.status !== 'completed' && (
           <button onClick={() => run(() => cancelBilling(account.id), 'Cancel all future billing for this student? This does not issue a refund.')} disabled={pending}
             className="text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50">Cancel billing</button>
@@ -141,6 +198,9 @@ export default function BillingPanel({ account, events }: { account: Account | n
           </button>
         </form>
       )}
+
+      {/* Cash/check form */}
+      {mode === 'offline' && offlineForm}
 
       {/* Refund form */}
       {mode === 'refund' && (
@@ -179,11 +239,17 @@ export default function BillingPanel({ account, events }: { account: Account | n
                   <span className={e.type === 'payment_failed' ? 'text-red-600' : 'text-gray-700'}>
                     {eventLabels[e.type] ?? e.type}
                   </span>
+                  {e.type === 'offline_payment' && (
+                    <span className="text-gray-400">
+                      {' · '}{e.payment_method === 'cash' ? 'Cash' : 'Check'}
+                      {e.received_by && ` · received by ${e.received_by}`}
+                    </span>
+                  )}
                   {e.notes && <span className="text-gray-400"> · {e.notes}</span>}
                 </div>
                 <div className="shrink-0 text-gray-400">
                   {e.amount_cents != null && <span className="mr-2 text-gray-600">{dollars(e.amount_cents)}</span>}
-                  {new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {new Date((e.type === 'offline_payment' && e.paid_at) ? e.paid_at : e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </div>
               </div>
             ))}

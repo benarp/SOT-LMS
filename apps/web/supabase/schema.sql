@@ -221,6 +221,9 @@ create table billing_events (
   amount_cents int,
   stripe_object_id text,
   notes text,
+  payment_method text,  -- 'cash' | 'check', for offline_payment events
+  received_by text,     -- who was handed the payment
+  paid_at date,          -- when it was actually paid (may predate data entry)
   created_by uuid references profiles,
   created_at timestamptz not null default now()
 );

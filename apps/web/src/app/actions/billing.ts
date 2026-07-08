@@ -308,6 +308,97 @@ export async function cancelBilling(accountId: string): Promise<{ error?: string
   }
 }
 
+/**
+ * Log a cash/check payment an admin received in person, and apply it toward
+ * the student's balance: a Stripe customer-balance credit (so any future
+ * automated charge is reduced accordingly) plus updating our own ledger —
+ * first toward the deposit, then toward monthly cycles — so "Balance due"
+ * and Finances stay accurate without waiting on a Stripe webhook.
+ */
+export async function recordOfflinePayment(
+  studentId: string,
+  schoolYearId: string,
+  amountDollars: number,
+  method: 'cash' | 'check',
+  paidAt: string,
+  receivedBy: string,
+  notes?: string
+): Promise<{ error?: string }> {
+  try {
+    const ctx = await requireAdmin()
+    const cents = Math.round(amountDollars * 100)
+    if (!Number.isFinite(cents) || cents <= 0) return { error: 'Enter a positive dollar amount.' }
+    if (method !== 'cash' && method !== 'check') return { error: 'Choose cash or check.' }
+    if (!paidAt) return { error: 'Enter the date it was paid.' }
+    if (!receivedBy.trim()) return { error: 'Enter who received the payment.' }
+
+    const account = await getOrCreateAccount(studentId, schoolYearId)
+    const admin = createAdminClient()
+
+    // Negative customer balance = credited against the next Stripe invoice,
+    // so the subscription doesn't also charge for what was paid in person
+    await getStripe().customers.createBalanceTransaction(account.stripe_customer_id, {
+      amount: -cents,
+      currency: 'usd',
+      description: `${method === 'cash' ? 'Cash' : 'Check'} payment received by ${receivedBy.trim()} on ${paidAt}`,
+    })
+
+    // Allocate toward the deposit first, then whole monthly cycles
+    let remaining = cents
+    const updates: Record<string, unknown> = {
+      total_collected_cents: account.total_collected_cents + cents,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (!account.deposit_paid) {
+      const depositRemaining = Math.max(0, DEPOSIT_CENTS - account.total_collected_cents)
+      if (remaining >= depositRemaining) {
+        updates.deposit_paid = true
+        remaining -= depositRemaining
+        if (account.status === 'pending') updates.status = 'active'
+      }
+    }
+
+    if (remaining > 0 && (updates.deposit_paid ?? account.deposit_paid)) {
+      const extraCycles = Math.floor(remaining / MONTHLY_CENTS)
+      if (extraCycles > 0) {
+        const newCyclesPaid = Math.min(TOTAL_CYCLES, account.cycles_paid + extraCycles)
+        updates.cycles_paid = newCyclesPaid
+        if (newCyclesPaid >= TOTAL_CYCLES) updates.status = 'completed'
+        else if (account.status === 'overdue') updates.status = 'active'
+      }
+    }
+
+    await admin.from('billing_accounts').update(updates).eq('id', account.id)
+
+    await admin.from('billing_events').insert({
+      billing_account_id: account.id,
+      type: 'offline_payment',
+      amount_cents: cents,
+      payment_method: method,
+      received_by: receivedBy.trim(),
+      paid_at: paidAt,
+      notes: notes?.trim() || null,
+      created_by: ctx.user.id,
+    })
+
+    await logAudit({
+      actor_id: ctx.user.id,
+      actor_email: ctx.profile.email,
+      action: 'billing_offline_payment_recorded',
+      target_type: 'billing_account',
+      target_id: account.id,
+      detail: { cents, method, paidAt, receivedBy: receivedBy.trim() },
+    })
+
+    revalidatePath(`/admin/students/${studentId}`)
+    revalidatePath('/admin/finances')
+    return {}
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Recording payment failed' }
+  }
+}
+
 export async function issueRefund(accountId: string, paymentIntentId: string, amountDollars: number): Promise<{ error?: string }> {
   try {
     const ctx = await requireAdmin()
