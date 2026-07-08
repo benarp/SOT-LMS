@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { markComplete, markIncomplete, submitReflection } from '@/app/actions/submissions'
+import { useRef, useState, useTransition } from 'react'
+import { markComplete, markIncomplete, submitReflection, saveReflectionFile, removeReflectionFile } from '@/app/actions/submissions'
+import { createClient } from '@/lib/supabase/client'
+
+type ResponseFile = { path: string; name: string; url: string | null }
 
 type HomeworkItem = {
   id: string
@@ -13,8 +16,13 @@ type HomeworkItem = {
   sort_order: number
   completed: boolean
   response: string | null
+  responseFile?: ResponseFile | null
   show_attribution?: boolean
 }
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+const UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp', 'image/gif', 'application/pdf']
+const isImageFile = (name: string) => /\.(jpe?g|png|heic|heif|webp|gif)$/i.test(name)
 
 const bookIcon = (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,9 +91,14 @@ export default function HomeworkFeed({
   const [drafts, setDrafts] = useState<Record<string, string>>(
     Object.fromEntries(items.map(i => [i.id, i.response ?? '']))
   )
+  const [files, setFiles] = useState<Record<string, ResponseFile | null>>(
+    Object.fromEntries(items.map(i => [i.id, i.responseFile ?? null]))
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({})
 
   function toggle(item: HomeworkItem) {
     const nowComplete = !optimistic[item.id]
@@ -115,6 +128,57 @@ export default function HomeworkFeed({
         return
       }
       setOptimistic(prev => ({ ...prev, [item.id]: true }))
+    })
+  }
+
+  async function uploadFile(item: HomeworkItem, file: File) {
+    setErrors(prev => ({ ...prev, [item.id]: '' }))
+    if (!UPLOAD_TYPES.includes(file.type) && !isImageFile(file.name)) {
+      setErrors(prev => ({ ...prev, [item.id]: 'Please choose a photo or PDF.' }))
+      return
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setErrors(prev => ({ ...prev, [item.id]: 'That file is over 10 MB — try a smaller photo.' }))
+      return
+    }
+    setUploadingId(item.id)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const path = `${user.id}/${item.id}-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('homework-uploads')
+        .upload(path, file, { contentType: file.type || undefined })
+      if (uploadError) throw new Error(uploadError.message)
+
+      const result = await saveReflectionFile(item.id, weekDueDate, path, file.name)
+      if (result.error) throw new Error(result.error)
+
+      // Local preview immediately; a signed URL replaces it on next load
+      setFiles(prev => ({ ...prev, [item.id]: { path, name: file.name, url: URL.createObjectURL(file) } }))
+      setOptimistic(prev => ({ ...prev, [item.id]: true }))
+    } catch (err) {
+      setErrors(prev => ({ ...prev, [item.id]: err instanceof Error ? err.message : 'Upload failed. Try again.' }))
+    } finally {
+      setUploadingId(null)
+    }
+  }
+
+  function removeFile(item: HomeworkItem) {
+    setErrors(prev => ({ ...prev, [item.id]: '' }))
+    startTransition(async () => {
+      const result = await removeReflectionFile(item.id)
+      if (result.error) {
+        setErrors(prev => ({ ...prev, [item.id]: result.error! }))
+        return
+      }
+      setFiles(prev => ({ ...prev, [item.id]: null }))
+      // Item stays complete only if a typed response remains
+      if (!(drafts[item.id] ?? '').trim() || !(item.response ?? '').trim()) {
+        setOptimistic(prev => ({ ...prev, [item.id]: !!(item.response ?? '').trim() }))
+      }
     })
   }
 
@@ -200,33 +264,93 @@ export default function HomeworkFeed({
                   </ul>
                 )}
 
-                {/* Reflection: prompt + response box */}
-                {reflection && (
-                  <div className="mt-3">
-                    {item.content && !done && (
-                      <p className="text-sm text-gray-500 whitespace-pre-line mb-2">{item.content}</p>
-                    )}
-                    <textarea
-                      value={drafts[item.id] ?? ''}
-                      onChange={e => setDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
-                      rows={done ? 3 : 5}
-                      placeholder="Write your response here…"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-y"
-                    />
-                    {errors[item.id] && <p className="text-xs text-red-600 mt-1">{errors[item.id]}</p>}
-                    {(drafts[item.id] ?? '').trim() !== (item.response ?? '').trim() || !done ? (
-                      <button
-                        onClick={() => saveReflection(item)}
-                        disabled={savingId === item.id}
-                        className="mt-2 bg-gray-900 text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
-                      >
-                        {savingId === item.id ? 'Saving…' : done ? 'Update response' : 'Save response'}
-                      </button>
-                    ) : (
-                      <p className="text-xs text-green-600 mt-1.5">✓ Response saved</p>
-                    )}
-                  </div>
-                )}
+                {/* Reflection: prompt + response box + journal photo */}
+                {reflection && (() => {
+                  const attached = files[item.id]
+                  const hasDraft = (drafts[item.id] ?? '').trim().length > 0
+                  return (
+                    <div className="mt-3">
+                      {item.content && !done && (
+                        <p className="text-sm text-gray-500 whitespace-pre-line mb-2">{item.content}</p>
+                      )}
+                      <textarea
+                        value={drafts[item.id] ?? ''}
+                        onChange={e => setDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        rows={done ? 3 : 5}
+                        placeholder={attached ? 'Add a note (optional)…' : 'Write your response here…'}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-y"
+                      />
+
+                      {/* Attached journal photo / file */}
+                      {attached && (
+                        <div className="mt-2 flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-lg p-2">
+                          {attached.url && isImageFile(attached.name) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={attached.url} alt="Your journal photo" className="w-16 h-16 object-cover rounded-md border border-gray-200" />
+                          ) : (
+                            <span className="text-xl px-2" aria-hidden>📎</span>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-gray-700 truncate">{attached.name}</p>
+                            <p className="text-xs text-green-600">✓ Counts as your response</p>
+                          </div>
+                          {attached.url && (
+                            <a href={attached.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-gray-700 underline flex-shrink-0">View</a>
+                          )}
+                          <button
+                            onClick={() => removeFile(item)}
+                            disabled={pending}
+                            className="flex-shrink-0 text-gray-300 hover:text-red-500 px-1.5 text-sm"
+                            aria-label="Remove upload"
+                          >✕</button>
+                        </div>
+                      )}
+
+                      {errors[item.id] && <p className="text-xs text-red-600 mt-1">{errors[item.id]}</p>}
+
+                      <div className="mt-2 flex items-center gap-3 flex-wrap">
+                        {((drafts[item.id] ?? '').trim() !== (item.response ?? '').trim() && hasDraft) || (!done && hasDraft) ? (
+                          <button
+                            onClick={() => saveReflection(item)}
+                            disabled={savingId === item.id}
+                            className="bg-gray-900 text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+                          >
+                            {savingId === item.id ? 'Saving…' : done ? 'Update response' : 'Save response'}
+                          </button>
+                        ) : done && (hasDraft || attached) ? (
+                          <p className="text-xs text-green-600">✓ Response saved</p>
+                        ) : null}
+
+                        {!attached && (
+                          <>
+                            <input
+                              ref={el => { fileInputs.current[item.id] = el }}
+                              type="file"
+                              accept="image/*,.pdf,.heic,.heif"
+                              className="hidden"
+                              onChange={e => {
+                                const file = e.target.files?.[0]
+                                if (file) uploadFile(item, file)
+                                e.target.value = ''
+                              }}
+                            />
+                            <button
+                              onClick={() => fileInputs.current[item.id]?.click()}
+                              disabled={uploadingId === item.id}
+                              className="text-xs text-gray-500 hover:text-gray-900 underline underline-offset-2 disabled:opacity-50"
+                            >
+                              {uploadingId === item.id
+                                ? 'Uploading…'
+                                : hasDraft || done
+                                ? '📷 Add a photo'
+                                : '📷 Prefer pen and paper? Add a photo of your journal instead'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Complete button — reflections complete by saving a response */}

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
@@ -39,9 +40,20 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
 
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('student_id, homework_item_id, is_late, response_text')
+    .select('student_id, homework_item_id, is_late, response_text, response_file_path, response_file_name')
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
     .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
+
+  // Signed URLs for uploaded journal photos (private bucket)
+  const admin = createAdminClient()
+  const fileUrls = new Map<string, string>()
+  for (const s of submissions || []) {
+    if (!s.response_file_path) continue
+    const { data: signed } = await admin.storage
+      .from('homework-uploads')
+      .createSignedUrl(s.response_file_path, 3600)
+    if (signed?.signedUrl) fileUrls.set(s.response_file_path, signed.signedUrl)
+  }
 
   const submissionMap = new Map(
     (submissions || []).map(s => [`${s.student_id}:${s.homework_item_id}`, s])
@@ -88,12 +100,28 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
                   return (
                     <td key={item.id} className="px-4 py-3 align-top">
                       {item.type === 'reflection' ? (
-                        submission?.response_text ? (
+                        submission?.response_text || submission?.response_file_path ? (
                           <div>
                             <p className="text-xs font-medium text-green-600 mb-1">
                               Submitted{submission.is_late ? ' (late)' : ''}
                             </p>
-                            <p className="text-sm text-gray-700 whitespace-pre-line">{submission.response_text}</p>
+                            {submission.response_text && (
+                              <p className="text-sm text-gray-700 whitespace-pre-line">{submission.response_text}</p>
+                            )}
+                            {submission.response_file_path && (
+                              fileUrls.get(submission.response_file_path) ? (
+                                <a href={fileUrls.get(submission.response_file_path)} target="_blank" rel="noopener noreferrer" className="inline-block mt-1">
+                                  {/\.(jpe?g|png|heic|heif|webp|gif)$/i.test(submission.response_file_path) ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={fileUrls.get(submission.response_file_path)} alt="Journal upload" className="max-h-40 rounded-lg border border-gray-200" />
+                                  ) : (
+                                    <span className="text-sm text-blue-600 underline">📎 {submission.response_file_name ?? 'Uploaded file'}</span>
+                                  )}
+                                </a>
+                              ) : (
+                                <span className="text-xs text-gray-400">📎 {submission.response_file_name ?? 'Uploaded file'}</span>
+                              )
+                            )}
                           </div>
                         ) : (
                           <span className="text-sm text-red-500">Not submitted</span>

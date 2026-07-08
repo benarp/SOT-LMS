@@ -26,7 +26,7 @@ export default async function WeekDetailPage({ params }: { params: Promise<{ wee
   const itemIds = (items || []).map(i => i.id)
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('homework_item_id, completed_at, is_late, response_text')
+    .select('homework_item_id, completed_at, is_late, response_text, response_file_path, response_file_name')
     .eq('student_id', user.id)
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
 
@@ -34,14 +34,26 @@ export default async function WeekDetailPage({ params }: { params: Promise<{ wee
     (submissions || []).map(s => [s.homework_item_id, s])
   )
 
-  const feedItems = (items || []).map(item => {
+  const feedItems = await Promise.all((items || []).map(async item => {
     const submission = submissionMap.get(item.id)
+    let responseFile = null
+    if (submission?.response_file_path) {
+      const { data: signed } = await supabase.storage
+        .from('homework-uploads')
+        .createSignedUrl(submission.response_file_path, 3600)
+      responseFile = {
+        path: submission.response_file_path,
+        name: submission.response_file_name ?? 'upload',
+        url: signed?.signedUrl ?? null,
+      }
+    }
     return {
       ...item,
       completed: !!submission,
       response: submission?.response_text ?? null,
+      responseFile,
     }
-  })
+  }))
 
   const dueDate = new Date(week.due_date)
   const completedCount = feedItems.filter(i => i.completed).length

@@ -19,13 +19,24 @@ export default async function AlumniPage() {
     ? await supabase.from('school_years').select('name').eq('id', profile.alumni_year_id).single()
     : { data: null }
 
-  // Their written reflection responses, joined to the homework item title
-  const { data: reflections } = await supabase
+  // Their reflection responses (typed or journal upload), with item titles
+  const { data: reflectionRows } = await supabase
     .from('submissions')
-    .select('id, response_text, completed_at, homework_items(title)')
+    .select('id, response_text, response_file_path, response_file_name, completed_at, homework_items(title)')
     .eq('student_id', user.id)
-    .not('response_text', 'is', null)
+    .or('response_text.not.is.null,response_file_path.not.is.null')
     .order('completed_at', { ascending: true })
+
+  const reflections = await Promise.all((reflectionRows ?? []).map(async r => {
+    let fileUrl: string | null = null
+    if (r.response_file_path) {
+      const { data: signed } = await supabase.storage
+        .from('homework-uploads')
+        .createSignedUrl(r.response_file_path, 3600)
+      fileUrl = signed?.signedUrl ?? null
+    }
+    return { ...r, fileUrl }
+  }))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -52,7 +63,14 @@ export default async function AlumniPage() {
             return (
               <div key={r.id} className="bg-white border border-gray-200 rounded-xl p-6">
                 <p className="text-sm font-semibold text-gray-900">{item?.title ?? 'Untitled reflection'}</p>
-                <p className="text-sm text-gray-700 mt-4 whitespace-pre-line leading-relaxed">{r.response_text}</p>
+                {r.response_text && (
+                  <p className="text-sm text-gray-700 mt-4 whitespace-pre-line leading-relaxed">{r.response_text}</p>
+                )}
+                {r.fileUrl && (
+                  <a href={r.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-sm text-blue-600 underline">
+                    📎 {r.response_file_name ?? 'Journal upload'}
+                  </a>
+                )}
                 <p className="text-xs text-gray-300 mt-4">
                   Written {new Date(r.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
