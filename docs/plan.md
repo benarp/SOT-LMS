@@ -1,5 +1,5 @@
 # SOT-LMS — Project Plan
-**Last updated:** July 2026  
+**Last updated:** July 7, 2026  
 **Owner:** Ben Arp, All Peoples Church
 
 ---
@@ -57,7 +57,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - `Scripture Reading` — day-by-day reading list
 - `Book Reading` — day-by-day reading plan
 - `Video` — embedded YouTube/Vimeo player; optional BibleProject attribution; falls back to external link for non-embeddable URLs
-- `Reflection` — typed response prompt; saving the response completes the item. Book reflections are just reflection items in the curriculum (the standalone Book Reflections feature was removed July 2026)
+- `Reflection` — typed response, OR a photo/file upload of a handwritten journal entry — either one completes the item. Files live in a private `homework-uploads` Supabase Storage bucket; admin reports and the student's own history show the upload inline. Book reflections are just reflection items in the curriculum (the standalone Book Reflections feature was removed July 2026)
 
 ### Announcements & Weekly Email
 - Admin creates announcements with title, body, and scheduled publish date
@@ -69,14 +69,20 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 
 ### Application Process
 - Public apply flow at `/apply`, gated by application open/close dates per school year
-- Step 1: Questionnaire (name, phone, city, 5 essay questions, agreement checkbox)
-- Step 2: Pastoral reference (pastor's name, email, church → system emails unique link)
-- Pastor fills 4 reference questions on a public page (no login required)
-- Admin reviews at `/admin/applications` — accept or decline with optional notes
-- Accept → role upgrades to `student`, acceptance email sent
-- Decline → decline email sent
-- Application question prompts and agreement text are editable per school year at `/admin/applications/settings`
+- Step 1: Contact info, then a fully custom, admin-authored questionnaire (see Form Builder below) — sectioned steps with a progress bar, autosave/resume, branching questions
+- Step 2: Pastoral reference (pastor's name, email, church → system emails unique link); pastor fills 4 questions on a public page, no login required
+- **Pipeline stages**: `draft` → `reference_requested` → `interview` → `approved`/`denied`. Reference submission auto-advances the application to Interview; admin can also skip the reference with a required, audit-logged note
+- Accept → acceptance email links straight to tuition setup; **does not** grant portal access
+- **Accepted applicants are gated**: their status page shows only a tuition-setup card until their deposit is paid. They become students (dashboard access) only once their year is activated AND their deposit is paid — accepted-but-unpaid applicants stay gated indefinitely
 - Accepted applicants are enrolled in the school year their application was for, not necessarily the currently active year
+
+### Admin — Application Form Builder
+- `/admin/applications/settings` — build the questionnaire per school year, no code required
+- 7 field types: section header, note, short answer, paragraph, yes/no, dropdown, checkbox group
+- Single-condition branching ("show this question only if an earlier answer = X")
+- Drag-and-drop reorder, visually grouped by section
+- **Preview mode** — renders the real applicant component with persistence disabled, so what you see is exactly what applicants see
+- Answers snapshot their label/type/order at submission time, so editing the form later never rewrites already-submitted applications
 
 ### Admin — Curriculum
 - Create and manage school years at `/admin/settings`
@@ -91,15 +97,18 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - Application cycle is decoupled from the active year (can accept applications for next year while current year is still running)
 
 ### Admin — Students
-- Full user management table: sortable/filterable, CSV export
-- Per-student detail page: edit name/email, change role, assign group, deactivate/reactivate, send password setup/reset email
+- Full user management table: sortable/filterable, CSV export, birthday column with filters (this week / this month / etc.)
+- Per-student detail page: edit name/email/birthday, change role, assign group, deactivate/reactivate, send password setup/reset email
 - **Impersonation** — view the app as any student for support; persistent banner while active; start/end recorded in `audit_log`
+- **Add student** — two modes: send an invite email, or create the account silently for students transferring from another system (no email sent; they sign in via "Forgot password?" with the same email they used before)
 - Audit log records: impersonation, role changes, deactivations, invites, profile edits, billing actions
 - Payment status column shows live billing status per student
+- Students can set their own birthday from Account settings
 
 ### Admin — Billing & Finances (Stripe)
-- Stripe Checkout: $400 deposit at signup + $200/month × 10 subscription (30-day trial gap); webhook auto-cancels after cycle 10
+- Stripe Checkout: $400 deposit at signup + $200/month × 10 subscription (30-day delay before the first monthly charge); webhook auto-cancels after cycle 10
 - Per-student billing panel: pause, resume, apply credit/scholarship (with required note), cancel, refund (full or partial, per charge), payment history
+- **Cash/check payments** — admin can log an in-person payment (amount, cash or check, date paid, who received it, optional note); applied as a Stripe customer-balance credit (so future automated charges are reduced accordingly) and allocated locally to the deposit first, then whole monthly cycles, so balances stay accurate without waiting on a webhook
 - Students can only update their card (restricted Stripe billing portal) — no self-service cancel
 - `/admin/finances`: summary cards (collected, outstanding, active, needs-attention), student-level table, CSV export
 - Outstanding balance is derived (expected cycles vs. paid), so paused/failed months are always accurate
@@ -124,37 +133,39 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - Account settings
 - EAS build profiles configured for cloud dev builds
 - Fixed: YouTube embed errors 153/154 in WebView; non-embeddable URLs open externally
+- **No billing/tuition flow in the app** (by design, for now) — students pay from the web portal. This also means Apple's In-App Purchase requirement doesn't apply; adding an in-app "Pay tuition" button later would need that revisited.
+- **No application flow in the app** — applicants use the web portal.
+
+### Dark Mode (Web + Mobile)
+- Light / Dark / System toggle, saved per-device, on both platforms
+- Web: CSS-variable inversion in `globals.css` — themes the whole app without per-component edits
+- Mobile: `lib/theme.ts` token system + `ThemeProvider`, every screen's `StyleSheet` converted; follows live OS theme changes while set to "System"
 
 ---
 
 ## What's Next
 
-### 1. Stripe Go-Live (manual setup)
-The Stripe billing code is fully built (July 2026). Before the first real charge, one-time setup:
+### 1. Stripe Go-Live (in progress)
+The Stripe billing code is fully built. Status as of this writing:
 
-> **⚠️ Current keys are from a personal/test Stripe account** (July 2026, for development
-> only). Before go-live, create the real Stripe account for All Peoples Church / SOT and
-> replace `STRIPE_SECRET_KEY` **and** `STRIPE_WEBHOOK_SECRET` everywhere they're set —
-> the webhook endpoint must be re-created under the new account too (signing secrets are
-> per-account, so the old one will silently fail signature verification).
-
-1. Create the Stripe account for All Peoples Church / SOT and grab live API keys
-2. Set env vars in Vercel **and** `.env.local`:
-   ```
-   STRIPE_SECRET_KEY=sk_live_...
-   STRIPE_WEBHOOK_SECRET=whsec_...
-   BILLING_ALERT_EMAILS=barp@allpeopleschurch.org,<finance person>
-   ```
-3. In the Stripe dashboard (the real account), add a webhook endpoint pointing to
-   `https://<production-domain>/api/stripe/webhook` with events:
-   `checkout.session.completed`, `invoice.payment_succeeded`,
-   `invoice.payment_failed`, `customer.subscription.deleted`,
-   `customer.subscription.updated` — copy its signing secret into `STRIPE_WEBHOOK_SECRET`
-4. Configure Stripe dunning/retry settings (Settings → Billing → Revenue recovery)
-5. Test end-to-end with test keys + Stripe test cards before switching to live keys
-6. Any Stripe customers/subscriptions created under the test account won't exist in the
-   real account — if real students set up payment during testing, their `billing_accounts`
-   rows must be cleared so they can re-run checkout under the new account
+- [x] Real Stripe account created for All Peoples Church / SOT
+- [x] Live webhook endpoint created at `https://sot-lms.vercel.app/api/stripe/webhook` with the
+      5 required events (`checkout.session.completed`, `invoice.payment_succeeded`,
+      `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated`)
+- [x] Test `billing_accounts` rows (created against the old test-mode account) cleared from
+      the database — Amy Arp, "BA", and Ben's own admin account. Clean slate for live mode.
+- [ ] **Set the 3 env vars in Vercel** (Project → Settings → Environment Variables → Production):
+      ```
+      STRIPE_SECRET_KEY=sk_live_...
+      STRIPE_WEBHOOK_SECRET=whsec_...        (from the live webhook endpoint above)
+      BILLING_ALERT_EMAILS=barp@allpeopleschurch.org,<finance person>
+      ```
+- [ ] Redeploy (Deployments → latest → "..." → Redeploy) so the env vars take effect
+- [ ] Confirm Stripe account activation is complete (business details + bank account approved)
+      — live charges silently won't process until this clears, independent of the keys being correct
+- [ ] Consider setting a statement descriptor (Stripe Settings → Business → Public details) so
+      charges are recognizable on a parent's card statement
+- [ ] Run one real small-dollar test charge end-to-end before trusting it for actual families
 
 Deposit refund policy: admin's discretion, via the Refund button on the student's billing panel.
 
@@ -221,4 +232,6 @@ Not started. Would notify students when new homework is posted or an announcemen
 | `email_log` | Records each weekly email send to prevent accidental duplicates |
 | `audit_log` | Records admin actions: impersonation, role changes, deactivation, invites, profile edits |
 | `billing_accounts` | One per student per school year; Stripe customer/subscription IDs, status, cycles paid, totals |
-| `billing_events` | Audit trail of every charge, failure, pause/resume, credit, and refund |
+| `billing_events` | Audit trail of every charge, failure, pause/resume, credit, refund, and offline cash/check payment |
+| `application_fields` | Admin-authored questionnaire per school year; type, options, branching rule, sort order |
+| `application_answers` | Applicant answers, snapshotting label/type/order so later form edits don't rewrite history |
