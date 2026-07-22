@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { pausePayments, resumePayments, applyCredit, cancelBilling, issueRefund, recordOfflinePayment } from '@/app/actions/billing'
-import { BILLING_STATUS_LABELS } from '@/lib/billing'
+import { BILLING_STATUS_LABELS, BILLING_EVENT_LABELS } from '@/lib/billing'
 
 type Account = {
   id: string
@@ -27,18 +27,7 @@ type BillingEvent = {
   created_at: string
 }
 
-const eventLabels: Record<string, string> = {
-  deposit_paid: 'Deposit paid',
-  payment_succeeded: 'Payment received',
-  payment_failed: 'Payment failed',
-  paused: 'Payments paused',
-  resumed: 'Payments resumed',
-  credit_applied: 'Credit applied',
-  cancelled: 'Billing cancelled',
-  completed: 'Paid in full',
-  refund_issued: 'Refund issued',
-  offline_payment: 'Cash/check payment',
-}
+const eventLabels = BILLING_EVENT_LABELS
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600',

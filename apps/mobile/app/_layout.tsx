@@ -51,6 +51,7 @@ function RootStack() {
         <Stack.Screen name="week/[weekId]" options={headerOptions} />
         <Stack.Screen name="item/[itemId]" options={headerOptions} />
         <Stack.Screen name="account" options={headerOptions} />
+        <Stack.Screen name="billing" options={headerOptions} />
       </Stack>
     </>
   )

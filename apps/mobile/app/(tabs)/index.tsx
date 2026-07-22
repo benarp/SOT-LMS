@@ -146,9 +146,14 @@ export default function ThisWeekScreen() {
         {/* Header */}
         <View style={styles.topRow}>
           <Text style={styles.schoolName}>School of Transformation</Text>
-          <TouchableOpacity onPress={() => router.push('/account')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.signOut}>Account</Text>
-          </TouchableOpacity>
+          <View style={styles.topRowLinks}>
+            <TouchableOpacity onPress={() => router.push('/billing')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.signOut}>Tuition</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/account')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.signOut}>Account</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Announcements */}
@@ -237,6 +242,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  topRowLinks: { flexDirection: 'row', gap: 16 },
   schoolName: { fontSize: 15, fontWeight: '600', color: colors.text },
   signOut: { fontSize: 13, color: colors.textFaint },
   announcement: {

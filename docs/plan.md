@@ -1,5 +1,5 @@
 # SOT-LMS — Project Plan
-**Last updated:** July 7, 2026  
+**Last updated:** July 14, 2026  
 **Owner:** Ben Arp, All Peoples Church
 
 ---
@@ -50,7 +50,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 ### Student Dashboard
 - **This Week** — current homework with progress bar, mark complete/incomplete
 - **History** — past weeks are fully interactive: students can complete missed items and submit/edit reflections late (marked "Submitted late")
-- **Tuition** — payment status, Stripe Checkout setup, update card on file
+- **Tuition** — payment status, Stripe Checkout setup, update card on file, payment/credit history (deposit, monthly charges, cash/check credits, refunds)
 - **Announcements** — active announcements appear at top of dashboard
 
 ### Homework Item Types
@@ -131,9 +131,10 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - Item detail — embedded YouTube/Vimeo player, day-by-day reading, reflection response box
 - History — past weeks with completion state
 - Account settings
+- **Tuition (read-only)** — payment status, balance, next/final payment dates, and payment/credit history; mirrors the web student view
 - EAS build profiles configured for cloud dev builds
 - Fixed: YouTube embed errors 153/154 in WebView; non-embeddable URLs open externally
-- **No billing/tuition flow in the app** (by design, for now) — students pay from the web portal. This also means Apple's In-App Purchase requirement doesn't apply; adding an in-app "Pay tuition" button later would need that revisited.
+- **No payment actions in the app** (by design, for now) — the Tuition screen is read-only; students still pay and manage their card from the web portal. This also means Apple's In-App Purchase requirement doesn't apply; adding an in-app "Pay tuition" button later would need that revisited.
 - **No application flow in the app** — applicants use the web portal.
 
 ### Dark Mode (Web + Mobile)
@@ -154,13 +155,9 @@ The Stripe billing code is fully built. Status as of this writing:
       `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated`)
 - [x] Test `billing_accounts` rows (created against the old test-mode account) cleared from
       the database — Amy Arp, "BA", and Ben's own admin account. Clean slate for live mode.
-- [ ] **Set the 3 env vars in Vercel** (Project → Settings → Environment Variables → Production):
-      ```
-      STRIPE_SECRET_KEY=sk_live_...
-      STRIPE_WEBHOOK_SECRET=whsec_...        (from the live webhook endpoint above)
-      BILLING_ALERT_EMAILS=barp@allpeopleschurch.org,<finance person>
-      ```
-- [ ] Redeploy (Deployments → latest → "..." → Redeploy) so the env vars take effect
+- [x] **Set the 3 env vars in Vercel** — confirmed present in Production via `vercel env ls` on
+      2026-07-14: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `BILLING_ALERT_EMAILS`
+- [x] Redeploy — confirmed the latest Production deployment postdates the env var changes
 - [ ] Confirm Stripe account activation is complete (business details + bank account approved)
       — live charges silently won't process until this clears, independent of the keys being correct
 - [ ] Consider setting a statement descriptor (Stripe Settings → Business → Public details) so
@@ -183,7 +180,28 @@ Code is complete. Email sends work but use `onboarding@resend.dev` as the sender
 
 ---
 
-### 3. CSV Student Import
+### 3. Supabase Auth — Enable Custom SMTP
+Discovered 2026-07-15 while troubleshooting Luke McGrath's forgot-password issue: his `/recover`
+requests all returned 200 but no email ever arrived (confirmed via auth logs — no 429s, so not
+the rate limit). Root cause: Supabase project has **Custom SMTP disabled**, so all auth emails
+(invite, confirm, recovery, magic link) go through Supabase's default shared mailer — meant for
+testing only, with poor deliverability to Gmail and a low shared rate limit. Luke's original
+10-day-old invite email had apparently been sitting in spam; his forgot-password emails likely
+suffered the same fate. Worked around for Luke by generating his recovery link directly in the
+Supabase dashboard.
+
+**Steps:**
+1. Get SMTP credentials from Resend (Dashboard → API Keys): host `smtp.resend.com`, port `587`,
+   username `resend`, password = API key
+2. Supabase dashboard → `Authentication → Settings → SMTP Settings` → enable Custom SMTP, enter
+   the above
+3. Sender address: use `onboarding@resend.dev` until domain verification (item 2 above) is done,
+   then switch to a real address on `allpeopleschurch.org`
+4. Retest forgot-password end-to-end on a test account, confirm prompt delivery outside spam
+
+---
+
+### 4. CSV Student Import
 Admin students page has a UI placeholder. Bulk import not yet implemented.
 
 **Spec:**
@@ -194,18 +212,24 @@ Admin students page has a UI placeholder. Bulk import not yet implemented.
 
 ---
 
-### 4. Mobile App Store Submission
-EAS build profiles are configured. Blocked on Apple Developer account.
+### 5. Mobile App Store Submission
+EAS build profiles are configured. Blocked on Apple Developer account access.
+
+**Status:** someone else in the org already enrolled All Peoples Church in the Apple Developer
+Program — need to track down who, since Ben doesn't currently have access.
 
 **Steps:**
-1. Enroll in Apple Developer Program ($99/year)
-2. Configure signing in EAS with Apple credentials
-3. Submit to App Store via `eas submit`
-4. Google Play submission can follow same EAS workflow
+1. Identify who enrolled the org (check church financial records/receipts for the $99/year Apple
+   Developer charge, or ask staff/finance who has an Apple ID tied to the organization)
+2. Get added as an Admin or App Manager on the existing account (developer.apple.com → Users and
+   Access), or get the existing owner to configure signing directly
+3. Configure signing in EAS with Apple credentials
+4. Submit to App Store via `eas submit`
+5. Google Play submission can follow same EAS workflow
 
 ---
 
-### 5. Push Notifications
+### 6. Push Notifications
 Not started. Would notify students when new homework is posted or an announcement is published.
 
 **Scope:**

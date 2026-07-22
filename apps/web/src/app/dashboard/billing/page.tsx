@@ -2,11 +2,23 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { StartCheckoutButton, UpdateCardButton } from '@/components/BillingActions'
 import {
-  BILLING_STATUS_LABELS, DEPOSIT_CENTS, MONTHLY_CENTS, TOTAL_CYCLES,
+  BILLING_STATUS_LABELS, BILLING_EVENT_LABELS, DEPOSIT_CENTS, MONTHLY_CENTS, TOTAL_CYCLES,
   formatCents, outstandingCents, nextPaymentDate, finalPaymentDate, remainingCents,
 } from '@/lib/billing'
 
+type BillingEvent = {
+  id: string
+  type: string
+  amount_cents: number | null
+  notes: string | null
+  payment_method: string | null
+  received_by: string | null
+  paid_at: string | null
+  created_at: string
+}
+
 const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+const fmtShortDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600',
@@ -28,10 +40,16 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
   const { data: account } = year ? await supabase
     .from('billing_accounts')
-    .select('status, deposit_paid, cycles_paid, total_collected_cents, credits_applied_cents, monthly_starts_at')
+    .select('id, status, deposit_paid, cycles_paid, total_collected_cents, credits_applied_cents, monthly_starts_at')
     .eq('student_id', user.id)
     .eq('school_year_id', year.id)
     .maybeSingle() : { data: null }
+
+  const { data: events } = account ? await supabase
+    .from('billing_events')
+    .select('id, type, amount_cents, notes, payment_method, received_by, paid_at, created_at')
+    .eq('billing_account_id', account.id)
+    .order('created_at', { ascending: false }) : { data: [] as BillingEvent[] }
 
   const status = account?.status ?? 'pending'
   const owed = account ? outstandingCents(account) : 0
@@ -129,6 +147,33 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </>
         )}
       </div>
+
+      {events && events.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+          <p className="text-sm font-medium text-gray-700 mb-3">Payment history</p>
+          <div className="space-y-2">
+            {events.map(e => (
+              <div key={e.id} className="flex items-baseline justify-between gap-2 text-sm">
+                <div className="min-w-0">
+                  <span className={e.type === 'payment_failed' ? 'text-red-600' : 'text-gray-700'}>
+                    {BILLING_EVENT_LABELS[e.type] ?? e.type}
+                  </span>
+                  {e.type === 'offline_payment' && (
+                    <span className="text-gray-400">
+                      {' · '}{e.payment_method === 'cash' ? 'Cash' : 'Check'}
+                    </span>
+                  )}
+                  {e.notes && <span className="text-gray-400"> · {e.notes}</span>}
+                </div>
+                <div className="shrink-0 text-gray-400">
+                  {e.amount_cents != null && <span className="mr-2 text-gray-600">{formatCents(e.amount_cents)}</span>}
+                  {fmtShortDate((e.type === 'offline_payment' && e.paid_at) ? e.paid_at : e.created_at)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="text-xs text-gray-400 leading-relaxed">
         Questions about your tuition, pauses, or refunds? Contact the school director — billing changes
