@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ImageBackground,
 } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useTheme, type ThemeColors } from '../lib/theme'
@@ -25,60 +25,85 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.inner}>
-        <View style={styles.header}>
-          <Text style={styles.school}>School of Transformation</Text>
-          <Text style={styles.subtitle}>Discipleship Training</Text>
+    <ImageBackground
+      source={require('../assets/login-bg.jpg')}
+      style={styles.bg}
+      imageStyle={styles.bgImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+        <View style={styles.inner}>
+          <View style={styles.card}>
+            <View style={styles.header}>
+              <Text style={styles.school}>School of Transformation</Text>
+              <Text style={styles.subtitle}>Discipleship Training</Text>
+            </View>
+
+            <View style={styles.form}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                placeholder="you@example.com"
+                placeholderTextColor={colors.placeholder}
+              />
+
+              <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                textContentType="password"
+                placeholder="••••••••"
+                placeholderTextColor={colors.placeholder}
+                onSubmitEditing={handleSignIn}
+                returnKeyType="done"
+              />
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleSignIn}
+                disabled={loading}
+              >
+                {loading
+                  ? <ActivityIndicator color={colors.accentText} />
+                  : <Text style={styles.buttonText}>Sign in</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            placeholder="you@example.com"
-            placeholderTextColor={colors.placeholder}
-          />
-
-          <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="password"
-            placeholder="••••••••"
-            placeholderTextColor={colors.placeholder}
-            onSubmitEditing={handleSignIn}
-            returnKeyType="done"
-          />
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSignIn}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color={colors.accentText} />
-              : <Text style={styles.buttonText}>Sign in</Text>
-            }
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   )
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  bg: { flex: 1 },
+  bgImage: { resizeMode: 'cover' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  container: { flex: 1 },
   inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
-  header: { marginBottom: 40 },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 28,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  header: { marginBottom: 24 },
   school: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
   subtitle: { fontSize: 14, color: colors.textFaint },
   form: {},
