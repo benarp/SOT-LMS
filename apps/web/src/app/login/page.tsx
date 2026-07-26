@@ -31,14 +31,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div
+      className="min-h-screen flex items-center justify-center bg-gray-900 bg-cover bg-center px-4"
+      style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('/login-bg.jpg')" }}
+    >
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-medium text-gray-900">School of Transformation</h1>
-          <p className="mt-1 text-sm text-gray-500">Discipleship Training School</p>
+          <h1 className="text-2xl font-medium text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.6)]">School of Transformation</h1>
+          <p className="mt-1 text-sm text-gray-200 [text-shadow:0_1px_6px_rgba(0,0,0,0.6)]">Discipleship Training School</p>
         </div>
 
-        <form onSubmit={handleLogin} className="bg-white border border-gray-200 rounded-xl p-8 space-y-5">
+        <form onSubmit={handleLogin} className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-8 space-y-5 shadow-xl">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
