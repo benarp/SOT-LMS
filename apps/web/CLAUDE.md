@@ -9,7 +9,9 @@ A learning management system for an in-person discipleship training school. 30�
 - **GitHub**: https://github.com/benarp/SOT-LMS
 - **Supabase project**: https://supabase.com/dashboard/project/ooehfpmrhuuufjaglzab
 - **Supabase URL**: https://ooehfpmrhuuufjaglzab.supabase.co
-- **Hosting**: Vercel (not yet connected — see task list)
+- **Hosting**: Vercel, project `sot-lms` — connected to GitHub (`benarp/SOT-LMS`), auto-deploys on push
+  - Production: https://schooloftransformation.app (also aliased at sot-lms.vercel.app)
+  - Preview deployments are created per-branch/PR automatically
 
 ## Tech stack
 - **Framework**: Next.js 16 (App Router) — note: uses `proxy.ts` not `middleware.ts` (renamed in Next 16)
@@ -89,6 +91,7 @@ npm run dev
 - Route protection (proxy.ts redirects unauthenticated users)
 - Student dashboard: current week's homework, progress bar, mark complete/incomplete
 - Sidebar navigation (role-aware — admin sees admin panel link)
+- Deployed to Vercel (production at schooloftransformation.app)
 
 ### Still to build (in order)
 1. Previous weeks view (`/dashboard/history`)
@@ -98,8 +101,7 @@ npm run dev
 5. Admin — student management (invite, CSV import, group assignment)
 6. Admin — reporting dashboard (completion rates, late submissions, per-student/group)
 7. Group leader scoped reporting view
-8. Deploy to Vercel
-9. Mobile app (Expo, Phase 3)
+8. Mobile app (Expo, Phase 3)
 
 ## Supabase notes
 - The `handle_new_user` trigger auto-creates a profile row when a new auth user is created
