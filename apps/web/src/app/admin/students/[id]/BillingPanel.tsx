@@ -114,17 +114,34 @@ export default function BillingPanel({
     </form>
   )
 
+  const disabledActionClass = "text-xs text-gray-400 border border-gray-200 px-3 py-1.5 rounded-lg opacity-50 cursor-not-allowed"
+
   if (!account) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-600">Status</span>
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+            No billing account yet
+          </span>
+        </div>
+
         <p className="text-sm text-gray-400">
-          No billing account yet — it&apos;s created automatically when the student starts payment setup, or when you record a cash/check payment below.
+          Created automatically when the student starts payment setup, or when you record a cash/check payment below.
         </p>
-        {mode === 'offline' ? offlineForm : (
-          <button onClick={() => setMode('offline')} className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-400">
-            Record cash/check payment
-          </button>
-        )}
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button disabled title="Set up billing first" className={disabledActionClass}>Pause</button>
+          <button disabled title="Set up billing first" className={disabledActionClass}>Apply credit</button>
+          <button disabled title="Set up billing first" className={disabledActionClass}>Refund</button>
+          {mode === 'offline' ? offlineForm : (
+            <button onClick={() => setMode('offline')} className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-400">
+              Record cash/check payment
+            </button>
+          )}
+          <button disabled title="Set up billing first" className={`${disabledActionClass} text-red-300 border-red-100`}>Cancel billing</button>
+        </div>
+
         {error && <p className="text-xs text-red-600">{error}</p>}
       </div>
     )
