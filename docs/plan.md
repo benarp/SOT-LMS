@@ -1,5 +1,5 @@
 # SOT-LMS — Project Plan
-**Last updated:** July 7, 2026  
+**Last updated:** July 26, 2026  
 **Owner:** Ben Arp, All Peoples Church
 
 ---
@@ -44,8 +44,9 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 ### Auth & Accounts
 - Email/password login via Supabase
 - Forgot-password flow (self-service email reset)
-- Role-based routing: `admin`, `group_leader`, `student`, `applicant`
+- Role-based routing: `admin`, `group_leader`, `student`, `applicant`, `alumni`
 - Route protection via `proxy.ts`
+- Login screen (web + mobile) has a full-bleed background photo behind the sign-in card, dark overlay + heading moved inside the card so it stays legible regardless of what's behind it in the photo, in both light and dark theme
 
 ### Student Dashboard
 - **This Week** — current homework with progress bar, mark complete/incomplete
@@ -108,6 +109,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 ### Admin — Billing & Finances (Stripe)
 - Stripe Checkout: $400 deposit at signup + $200/month × 10 subscription (30-day delay before the first monthly charge); webhook auto-cancels after cycle 10
 - Per-student billing panel: pause, resume, apply credit/scholarship (with required note), cancel, refund (full or partial, per charge), payment history
+- Before a billing account exists yet, those actions show grayed out (with a "Set up billing first" tooltip) instead of being hidden — so admins can see the full set of controls rather than a sparse, different-looking panel
 - **Cash/check payments** — admin can log an in-person payment (amount, cash or check, date paid, who received it, optional note); applied as a Stripe customer-balance credit (so future automated charges are reduced accordingly) and allocated locally to the deposit first, then whole monthly cycles, so balances stay accurate without waiting on a webhook
 - Students can only update their card (restricted Stripe billing portal) — no self-service cancel
 - `/admin/finances`: summary cards (collected, outstanding, active, needs-attention), student-level table, CSV export
@@ -126,7 +128,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - No write access
 
 ### Mobile App (Expo)
-- Login screen
+- Login screen — same background-photo treatment as web (see Auth & Accounts above)
 - This Week — homework checklist with announcements
 - Item detail — embedded YouTube/Vimeo player, day-by-day reading, reflection response box
 - History — past weeks with completion state
@@ -135,6 +137,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - Fixed: YouTube embed errors 153/154 in WebView; non-embeddable URLs open externally
 - **No billing/tuition flow in the app** (by design, for now) — students pay from the web portal. This also means Apple's In-App Purchase requirement doesn't apply; adding an in-app "Pay tuition" button later would need that revisited.
 - **No application flow in the app** — applicants use the web portal.
+- **No CI/OTA automation** — merging to `main` only updates source; shipping to a device requires running an EAS build yourself (no `expo-updates` wired up yet)
 
 ### Dark Mode (Web + Mobile)
 - Light / Dark / System toggle, saved per-device, on both platforms
@@ -212,6 +215,13 @@ Not started. Would notify students when new homework is posted or an announcemen
 - Expo Push Notifications API
 - Admin triggers notification when publishing a new week or announcement
 - Opt-out stored on profile
+
+---
+
+## Known Issues
+
+### Schema drift: some production objects aren't in the tracked migrations
+`applications`, `pastoral_references`, `application_settings`, the `application_status` enum, and the `'applicant'` value of the `user_role` enum all exist and are actively used in production, but have no `CREATE TABLE`/`CREATE TYPE`/`ALTER TYPE ... ADD VALUE` anywhere in the tracked `apps/web/supabase/*.sql` files — only later `ALTER TABLE` migrations reference them. They must have been created directly in the Supabase SQL editor at some point and never committed. Full detail in `apps/web/CLAUDE.md` → "Known drift". Not urgent, but worth backfilling a migration (or pulling the live schema via `supabase db pull`) before ever needing to rebuild this schema from scratch — e.g. disaster recovery or standing up a second environment.
 
 ---
 
