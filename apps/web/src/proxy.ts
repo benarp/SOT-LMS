@@ -38,7 +38,8 @@ export async function proxy(request: NextRequest) {
     pathname === '/forgot-password' ||
     pathname.startsWith('/apply') ||
     pathname.startsWith('/reference') ||
-    pathname.startsWith('/unsubscribe')
+    pathname.startsWith('/unsubscribe') ||
+    pathname.startsWith('/auth/callback')
 
   // Redirect unauthenticated users to login (except public routes)
   if (!user && !isPublicRoute) {

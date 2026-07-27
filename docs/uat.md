@@ -9,7 +9,7 @@ Where a test needs a specific account, it's noted. Recommended test accounts:
 - **Group leader** — a test account with role `group_leader` assigned to a group
 - A spare inbox you can receive email at (invites, references, resets)
 
-> Email tests: sender is `onboarding@resend.dev` until the domain is verified.
+> Email tests: sender is `admin@schooloftransformation.app` (domain verified).
 > Billing tests: Stripe test mode — card `4242 4242 4242 4242`, any expiry/CVC/ZIP.
 > Decline card: `4000 0000 0000 9995`.
 
@@ -182,7 +182,7 @@ Where a test needs a specific account, it's noted. Recommended test accounts:
 
 ## Known gaps (expected failures — don't file these)
 
-- Emails come from `onboarding@resend.dev` until the Resend domain is verified
+- Emails come from `admin@schooloftransformation.app` (domain verified)
 - Stripe runs on the personal **test** account until go-live (plan.md §1)
 - Mobile app has no dark mode yet, no Tuition tab, and no application flow (web-only features)
 - CSV bulk import not built — transfers are one at a time for now

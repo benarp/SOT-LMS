@@ -7,9 +7,8 @@ import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
-const ADMIN_EMAIL = 'barp@allpeopleschurch.org'
-// TODO: swap FROM_EMAIL back to ADMIN_EMAIL after allpeopleschurch.org domain is verified in Resend
-const FROM_EMAIL = 'onboarding@resend.dev'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'admin@schooloftransformation.app'
+const ADMIN_EMAIL = FROM_EMAIL
 
 // ─── Applicant: initialize account after signup ───────────────────────────────
 

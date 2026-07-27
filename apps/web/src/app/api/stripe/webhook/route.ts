@@ -200,7 +200,8 @@ async function notifyPaymentFailure(
   amountCents: number
 ) {
   if (!process.env.RESEND_API_KEY) return
-  const recipients = (process.env.BILLING_ALERT_EMAILS || 'barp@allpeopleschurch.org')
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'admin@schooloftransformation.app'
+  const recipients = (process.env.BILLING_ALERT_EMAILS || fromEmail)
     .split(',').map(e => e.trim()).filter(Boolean)
   if (recipients.length === 0) return
 
@@ -209,7 +210,7 @@ async function notifyPaymentFailure(
 
   const resend = new Resend(process.env.RESEND_API_KEY)
   await resend.emails.send({
-    from: 'onboarding@resend.dev', // TODO: swap after domain verification
+    from: fromEmail,
     to: recipients,
     subject: `Payment failed — ${student?.full_name || 'a student'} | SOT billing`,
     html: `<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;max-width:560px;margin:40px auto;color:#111827;">

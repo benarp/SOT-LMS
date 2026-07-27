@@ -42,7 +42,7 @@ export default function SendTestEmailButton() {
 
       {state === 'done' && (
         <p className="mt-2 text-sm text-green-600 font-medium">
-          Test email sent to barp@allpeopleschurch.org ✓
+          Test email sent to your inbox ✓
         </p>
       )}
       {state === 'error' && (

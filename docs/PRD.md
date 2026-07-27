@@ -63,10 +63,10 @@ Admins create announcements with a title, body, and publish date (supports futur
 
 From the Announcements page, the admin can:
 
-- **Send test to me** — sends a formatted preview to `barp@allpeopleschurch.org` with `[TEST]` in the subject
+- **Send test to me** — sends a formatted preview to the logged-in admin's email with `[TEST]` in the subject
 - **Send weekly email** — sends to all enrolled students
 
-The email includes the next upcoming week's title, due date, all homework items, and any active announcements. Sent via Resend. *Requires Resend account setup and domain verification for `allpeopleschurch.org`.*
+The email includes the next upcoming week's title, due date, all homework items, and any active announcements. Sent via Resend from `admin@schooloftransformation.app` (domain verified).
 
 Safeguards: each send is recorded in `email_log` (a "last sent" date shows next to the button, with a warning before re-sending within 5 days); every email carries a per-student unsubscribe link backed by `profiles.unsubscribe_token`, and opted-out students are skipped.
 
@@ -195,7 +195,7 @@ A React Native app (Expo) providing the student experience natively on iOS and A
 | Item | Notes |
 |---|---|
 | **Stripe billing** | Full spec in [`docs/billing-spec.md`](./billing-spec.md). $400 deposit + $200/month × 10 months. Includes pause, resume, credits, cancellation, refunds, and financial reporting. Required before first paid cohort. |
-| Email (Resend) | Code is complete. Needs Resend account, domain verification for `allpeopleschurch.org`, and `RESEND_API_KEY` added to Vercel env vars |
+| Email (Resend) | Code complete, sending from verified domain `schooloftransformation.app`. Confirm `RESEND_API_KEY` is set in Vercel env vars |
 | Mobile app store submission | Expo build configured; pending Apple Developer account and Xcode setup |
 | CSV student import | Admin students page has UI placeholder; bulk import not yet implemented |
 | Push notifications | Not started; would notify students of new homework or announcements |

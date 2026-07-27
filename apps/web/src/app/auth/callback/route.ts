@@ -8,7 +8,13 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) {
+      // Most often: link expired, already used, or opened in a different
+      // browser than the one that requested it (PKCE code verifier lives
+      // in a cookie on the requesting browser only)
+      return NextResponse.redirect(`${origin}/login?error=link_expired`)
+    }
   }
 
   // Only allow same-site relative redirects

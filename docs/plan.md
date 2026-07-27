@@ -65,7 +65,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
   - Includes upcoming week title, due date, homework items, and active announcements
   - Send log with "last sent" date and warning before re-sending within 5 days
   - Per-student unsubscribe token; opted-out students are skipped
-  - Test send (to `barp@allpeopleschurch.org`) before sending to all
+  - Test send (to the admin's own email) before sending to all
 
 ### Application Process
 - Public apply flow at `/apply`, gated by application open/close dates per school year
@@ -168,15 +168,16 @@ Deposit refund policy: admin's discretion, via the Refund button on the student'
 
 ---
 
-### 2. Resend Domain Verification
-Code is complete. Email sends work but use `onboarding@resend.dev` as the sender.
+### 2. Resend Domain Verification — DONE
+Domain switched to `schooloftransformation.app` (verified in Resend). All app-level sends
+(weekly digest, applications, billing alerts) now send `from`/`replyTo` as
+`admin@schooloftransformation.app` instead of the `onboarding@resend.dev` sandbox address.
+Updated in:
+- `apps/web/src/app/actions/apply.ts`
+- `apps/web/src/app/actions/email.ts`
+- `apps/web/src/app/api/stripe/webhook/route.ts`
 
-**Steps:**
-1. Add `allpeopleschurch.org` DNS records in Resend dashboard
-2. Update `FROM_EMAIL` in:
-   - `apps/web/src/app/actions/apply.ts`
-   - `apps/web/src/app/actions/email.ts`
-3. Add `RESEND_API_KEY` to Vercel environment variables
+Still need: confirm `RESEND_API_KEY` is set in Vercel environment variables for production.
 
 ---
 
@@ -195,9 +196,30 @@ Supabase dashboard.
    username `resend`, password = API key
 2. Supabase dashboard → `Authentication → Settings → SMTP Settings` → enable Custom SMTP, enter
    the above
-3. Sender address: use `onboarding@resend.dev` until domain verification (item 2 above) is done,
-   then switch to a real address on `allpeopleschurch.org`
+3. Sender address: `admin@schooloftransformation.app` (domain now verified — no sandbox fallback needed)
 4. Retest forgot-password end-to-end on a test account, confirm prompt delivery outside spam
+
+**Related bug fixed 2026-07-26:** a second, separate issue — the email arrives, but clicking the
+link silently failed to reset anything and dropped the user back on `/login` with no explanation.
+Root cause: `auth/callback/route.ts` called `exchangeCodeForSession(code)` without checking the
+returned error, so any failed exchange (expired/already-used link, or — the common case — the
+recovery link opened in a different browser/device than the one that requested it, since the PKCE
+code verifier lives in a cookie on the requesting browser only) fell through to a redirect as if
+it had succeeded. Fixed: the callback route now redirects to `/login?error=link_expired` on
+exchange failure, and the login page shows an explanation + a link back to `/forgot-password`.
+This does not require any Supabase dashboard change and is independent of the Custom SMTP item
+above — both can leave a user unable to reset their password, with different symptoms (email
+never arrives vs. email arrives but the link doesn't work).
+
+**Third bug fixed 2026-07-26 (the actual root cause):** even with a correct `redirect_to` and a
+Supabase Redirect URLs allow-list entry for it, `/auth/callback` was never reachable while
+unauthenticated. `proxy.ts`'s route guard redirects any unauthenticated request to `/login`
+unless the path is in a small public allowlist — and `/auth/callback` wasn't on it. So the
+request that's supposed to exchange the recovery code for a session got bounced to `/login`
+before the route handler ever ran, silently, for every email-based auth flow (password reset,
+invites, magic links) — not just recovery. Fixed by adding `pathname.startsWith('/auth/callback')`
+to the public-route allowlist in `proxy.ts`. This was the actual blocker the whole time; the
+earlier two fixes were real but couldn't matter until this one landed.
 
 ---
 

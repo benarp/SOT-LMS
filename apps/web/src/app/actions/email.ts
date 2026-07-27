@@ -182,14 +182,14 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const fromEmail = 'onboarding@resend.dev' // TODO: swap back to barp@allpeopleschurch.org after domain verification
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'admin@schooloftransformation.app'
   const subject = `Week ${week.week_number} — ${week.title} | School of Transformation`
 
   const emails = students
     .filter(s => s.email)
     .map(s => ({
       from: fromEmail,
-      replyTo: 'barp@allpeopleschurch.org',
+      replyTo: fromEmail,
       to: s.email!,
       subject,
       html: buildEmailHtml({
@@ -265,12 +265,13 @@ export async function sendTestEmail(): Promise<{ weekTitle?: string; error?: str
 
   const html = buildEmailHtml({ week, items: items || [], announcements: announcements || [], schoolYear })
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const toEmail = profile?.email || 'barp@allpeopleschurch.org'
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'admin@schooloftransformation.app'
+  const toEmail = profile?.email || fromEmail
 
   try {
     await resend.emails.send({
-      from: 'onboarding@resend.dev', // TODO: swap back to barp@allpeopleschurch.org after domain verification
-      replyTo: 'barp@allpeopleschurch.org',
+      from: fromEmail,
+      replyTo: fromEmail,
       to: toEmail,
       subject: `[TEST] Week ${week.week_number} — ${week.title} | School of Transformation`,
       html,
