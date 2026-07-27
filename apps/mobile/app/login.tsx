@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ImageBackground,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ImageBackground, Linking,
 } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useTheme, type ThemeColors } from '../lib/theme'
@@ -77,6 +77,14 @@ export default function LoginScreen() {
                   : <Text style={styles.buttonText}>Sign in</Text>
                 }
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.applyButton}
+                activeOpacity={0.8}
+                onPress={() => Linking.openURL('https://sot-lms.vercel.app/apply')}
+              >
+                <Text style={styles.applyButtonText}>Apply now</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -127,4 +135,13 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: colors.accentText, fontWeight: '600', fontSize: 15 },
+  applyButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  applyButtonText: { color: colors.text, fontWeight: '600', fontSize: 15 },
 })

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function LoginForm() {
+export default function LoginForm({ applyYearLabel }: { applyYearLabel: string | null }) {
   const params = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -105,6 +105,15 @@ export default function LoginForm() {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+
+          <div className="px-8 pb-8 pt-5 border-t border-gray-100">
+            <Link
+              href="/apply"
+              className="block w-full text-center border border-gray-300 text-gray-900 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Apply for {applyYearLabel ?? 'the upcoming year'} →
+            </Link>
+          </div>
         </div>
       </div>
     </div>
