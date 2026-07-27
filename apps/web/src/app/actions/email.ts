@@ -103,7 +103,7 @@ function buildEmailHtml({
 
     <!-- Footer CTA -->
     <div style="padding:28px 36px;text-align:center;border-top:1px solid #f3f4f6;">
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}"
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'}"
          style="display:inline-block;background:#111827;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:10px;">
         Log in to mark items complete →
       </a>
@@ -180,7 +180,7 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
 
   if (!students || students.length === 0) return { sent: 0, error: 'No students found' }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'
   const resend = new Resend(process.env.RESEND_API_KEY)
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'admin@schooloftransformation.app'
   const subject = `Week ${week.week_number} — ${week.title} | School of Transformation`

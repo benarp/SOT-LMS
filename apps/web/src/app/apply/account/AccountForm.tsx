@@ -25,7 +25,10 @@ export default function AccountForm() {
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/apply/questionnaire`,
+        },
       })
       if (signUpError) {
         setError(signUpError.message)

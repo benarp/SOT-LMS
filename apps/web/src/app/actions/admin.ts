@@ -160,7 +160,7 @@ export async function inviteStudent(formData: FormData): Promise<{ error?: strin
 
   const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}/auth/callback`,
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'}/auth/callback`,
   })
 
   if (error) return { error: error.message }
@@ -362,7 +362,7 @@ export async function sendPasswordSetupEmail(userId: string): Promise<{ error?: 
 
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}/auth/callback?next=/reset-password`,
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'}/auth/callback?next=/reset-password`,
   })
   if (error) return { error: error.message }
 

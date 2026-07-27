@@ -6,7 +6,7 @@ import { getApplicationCycle } from '@/lib/applicationYear'
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'admin@schooloftransformation.app'
 const ADMIN_EMAIL = FROM_EMAIL
 
@@ -359,7 +359,7 @@ function buildApprovalEmail({ fullName, notes }: { fullName: string; notes?: str
   ${notes ? `<p>${notes}</p>` : ''}
   <p>Your next step is to set up tuition payment — a $400 deposit today, then $200/month for 10 months.</p>
   <p style="margin:28px 0;">
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}/dashboard/billing" style="background:#111827;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:500;">Set up tuition payment →</a>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'}/dashboard/billing" style="background:#111827;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:500;">Set up tuition payment →</a>
   </p>
   <p>We'll be in touch soon with next steps. Welcome to the family!</p>
   <p>— School of Transformation</p>

@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getStripe, DEPOSIT_CENTS, MONTHLY_CENTS, TOTAL_CYCLES } from '@/lib/billing'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'
 
 // ── Shared ──────────────────────────────────────────────────
 

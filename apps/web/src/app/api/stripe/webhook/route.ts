@@ -218,7 +218,7 @@ async function notifyPaymentFailure(
       <p><strong>${student?.full_name || 'Unknown student'}</strong> (${student?.email || '—'}) had a charge of
       $${(amountCents / 100).toFixed(2)} fail. Their account is now marked overdue.</p>
       <p>Stripe will retry automatically per your dunning settings. You can review the account in the
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://sot-lms.vercel.app'}/admin/finances">Finances section</a>.</p>
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://schooloftransformation.app'}/admin/finances">Finances section</a>.</p>
     </body></html>`,
   }).catch(err => console.error('payment failure email failed:', err))
 }
