@@ -1,10 +1,13 @@
 import { Suspense } from 'react'
 import LoginForm from './LoginForm'
+import { getApplicationCycle } from '@/lib/applicationYear'
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const { year } = await getApplicationCycle()
+
   return (
     <Suspense fallback={null}>
-      <LoginForm />
+      <LoginForm applyYearLabel={year?.name ?? null} />
     </Suspense>
   )
 }
