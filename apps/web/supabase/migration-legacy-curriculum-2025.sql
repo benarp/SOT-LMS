@@ -10,13 +10,11 @@
 -- reconfigured into school_years/weeks/homework_items for the current class
 -- year, once we're ready to do that mapping.
 --
--- Captured so far: lessons 1–17, 19, 21–31, 33–41. Lesson 32 is still missing;
--- 18 and 20 do not exist (numbering intentionally skips them in the source
--- platform). Per-step detail (full titles, reading lists, question bank
--- contents) is still to be added later — see truncated titles below. Note:
--- the source UI's earlier "ONLINE LESSONS (39)" count is now known to be
--- stale/undercounting — lesson 41 exists, so there are at least 41 lessons
--- total.
+-- All lessons captured: 1–17, 19, 21–41 (41 lessons total; 18 and 20 do not
+-- exist — numbering intentionally skips them in the source platform, per the
+-- user). Per-step detail (full titles, reading lists, question bank contents)
+-- is still to be added later — see truncated titles below. Note: the source
+-- UI's earlier "ONLINE LESSONS (39)" count was stale/undercounting.
 --
 -- Lesson 41 ("Complete Post-SOT") is a real draft, not yet published in the
 -- source platform — its lesson-level status is 'incomplete' and its steps are
@@ -93,6 +91,9 @@ insert into legacy_lessons (lesson_number, title, due_date_label, start_date, en
   (29, 'Lesson 29',        'Due February 24th',  '2026-02-18', '2026-02-25', true, 'published'),
   (30, 'Lesson 30',        'Due March 3rd',      '2026-02-25', '2026-03-04', true, 'published'),
   (31, 'Lesson 31',        'Due March 10th',     '2026-03-04', '2026-03-15', true, 'published');
+
+insert into legacy_lessons (lesson_number, title, due_date_label, start_date, end_date, has_photo, status) values
+  (32, 'Lesson 32',        'Due March 17th', '2026-03-11', '2026-03-22', true, 'published');
 
 insert into legacy_lessons (lesson_number, title, due_date_label, start_date, end_date, has_photo, status) values
   (33, 'Lesson 33',        'Due March 24th', '2026-03-18', '2026-03-29', true, 'published'),
@@ -331,6 +332,12 @@ insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_q
   ((select id from legacy_lessons where lesson_number = 31), 4, 'Bible Project Video: Ezekie...',     'fill_in_upload', true),
   ((select id from legacy_lessons where lesson_number = 31), 5, 'Bible Project Video: Lamen...',      'fill_in_upload', true),
   ((select id from legacy_lessons where lesson_number = 31), 6, 'Workplace Panel',                    'content', false);
+
+-- Lesson 32 — note: source UI has no visible Step 2 (jumps 1, 3, 4); preserved as shown
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 32), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 32), 3, 'Bible Project Video: Obadiah',       'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 32), 4, 'Bible Project Video: Haggai',        'fill_in_upload', true);
 
 -- Lesson 33
 insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
