@@ -10,10 +10,16 @@
 -- reconfigured into school_years/weeks/homework_items for the current class
 -- year, once we're ready to do that mapping.
 --
--- Captured so far: lessons 1–17, 19, 21, 22 of 39 shown in the source UI
--- ("ONLINE LESSONS (39)"). Lessons 18, 20, and 23–39 are still missing, as is
--- per-step detail (full titles, reading lists, question bank contents) — see
--- truncated titles below.
+-- Captured so far: lessons 1–17, 19, 21, 22, 33–41. Lessons 18, 20, and 23–32
+-- are still missing, as is per-step detail (full titles, reading lists,
+-- question bank contents) — see truncated titles below. Note: the source UI's
+-- earlier "ONLINE LESSONS (39)" count is now known to be stale/undercounting —
+-- lesson 41 exists, so there are at least 41 lessons total.
+--
+-- Lesson 41 ("Complete Post-SOT") is a real draft, not yet published in the
+-- source platform — its lesson-level status is 'incomplete' and its steps are
+-- 'draft', preserved as such rather than the 'published' default used
+-- elsewhere.
 
 create table legacy_lessons (
   id uuid primary key default gen_random_uuid(),
@@ -74,6 +80,17 @@ insert into legacy_lessons (lesson_number, title, due_date_label, start_date, en
   (19, 'Lesson 19',              'Due December 23rd',  '2025-12-15', '2025-12-28', true),
   (21, 'Lesson 21',              'Due December 30th',  '2025-12-24', '2026-01-04', true),
   (22, 'Lesson 22',              'Due January 6th',     '2025-12-31', '2026-01-11', true);
+
+insert into legacy_lessons (lesson_number, title, due_date_label, start_date, end_date, has_photo, status) values
+  (33, 'Lesson 33',        'Due March 24th', '2026-03-18', '2026-03-29', true, 'published'),
+  (34, 'Lesson 34',        'Due March 31st', '2026-03-25', '2026-04-05', true, 'published'),
+  (35, 'Lesson 35',        'Due April 7th',  '2026-03-31', '2026-04-12', true, 'published'),
+  (36, 'Lesson 36',        'Due April 14th', '2026-03-31', '2026-04-19', true, 'published'),
+  (37, 'Lesson 37',        'Due April 21st', '2026-03-31', '2026-04-26', true, 'published'),
+  (38, 'Lesson 38',        'Due April 28th', '2026-03-31', '2026-05-03', true, 'published'),
+  (39, 'Lesson 39',        'Due May 5th',    '2026-03-31', '2026-05-10', true, 'published'),
+  (40, 'Lesson 40',        'Due May 12th',   '2026-03-31', '2026-05-12', true, 'published'),
+  (41, 'Complete Post-SOT', null,            '2026-05-06', '2026-05-12', true, 'incomplete');
 
 -- Lesson 1 — standing resource, single step
 insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
@@ -225,3 +242,73 @@ insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_q
 insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
   ((select id from legacy_lessons where lesson_number = 22), 1, 'Catch Up Week!',                     'content', false),
   ((select id from legacy_lessons where lesson_number = 22), 2, 'Intentional Living- Joe Rho...',     'content', false);
+
+-- Lesson 33
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 33), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 33), 2, 'Bible Project Video: Zechar...',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 33), 3, 'Bible Project Video: Ezra a...',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 33), 4, 'Bible Project Video: Malachi',       'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 33), 5, 'Bible Memorization: Luke 4...',      'content', false);
+
+-- Lesson 34
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 34), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 34), 2, 'Book Reading "The Beginn...',        'content', false),
+  ((select id from legacy_lessons where lesson_number = 34), 3, 'Bible Project Video: Esther',        'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 34), 4, 'Bible Project Video: Joel',          'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 34), 5, 'Bible Project Video: Matthe...',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 34), 6, 'Bible Memorization: Luke 4...',      'content', false);
+
+-- Lesson 35
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 35), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 35), 2, 'Book Reading: "The Begin...',        'content', false),
+  ((select id from legacy_lessons where lesson_number = 35), 3, 'Bible Project Video: Mark',          'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 35), 4, 'Bible Project Video: Matthe...',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 35), 5, 'Bible Memorization: Acts 2:...',     'content', false);
+
+-- Lesson 36
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 36), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 36), 2, 'Book Reading: "The Begin...',        'content', false),
+  ((select id from legacy_lessons where lesson_number = 36), 3, 'Bible Memorization: Acts 2:...',     'content', false);
+
+-- Lesson 37
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 37), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 37), 2, 'Book Reading: "The Begin...',        'content', false),
+  ((select id from legacy_lessons where lesson_number = 37), 3, 'Bible Project Video: Acts 1-12',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 37), 4, 'Bible Project Video: Galatia...',    'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 37), 5, 'Bible Memorization: Acts 2:...',     'content', false);
+
+-- Lesson 38
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 38), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 38), 2, 'Book Reading: "The Begin...',        'content', false),
+  ((select id from legacy_lessons where lesson_number = 38), 3, 'Bible Project Video: 1 Thes...',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 38), 4, 'Bible Project Video: 2 Thes...',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 38), 5, 'Bible Memorization: Acts 2:...',     'content', false);
+
+-- Lesson 39
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 39), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 39), 2, 'Book Reading: "The Begin...',        'content', false),
+  ((select id from legacy_lessons where lesson_number = 39), 3, 'Bible Project Video: Roman...',      'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 39), 4, 'Bible Project Video: Roman...',      'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 39), 5, 'Bible Memorization: Acts 2:...',     'content', false);
+
+-- Lesson 40
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank) values
+  ((select id from legacy_lessons where lesson_number = 40), 1, 'Bible Reading Check-In [Du...',      'multiple_choice', true),
+  ((select id from legacy_lessons where lesson_number = 40), 2, 'Bible Project Video: 1 Corin...',    'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 40), 3, 'Bible Project Video: Acts 13...',    'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 40), 4, 'Bible Project Video: 2 Cori...',     'fill_in_upload', true),
+  ((select id from legacy_lessons where lesson_number = 40), 5, 'Book Reflection: "The Begi...',      'fill_in_upload', true);
+
+-- Lesson 41 — draft, not yet published in the source platform
+insert into legacy_lesson_steps (lesson_id, step_number, title, step_type, has_question_bank, status) values
+  ((select id from legacy_lessons where lesson_number = 41), 1, 'Bible Reading Check-In',             'multiple_choice', true, 'draft'),
+  ((select id from legacy_lessons where lesson_number = 41), 2, 'Bible Project Video: Ephesi...',     'fill_in_upload', true, 'draft'),
+  ((select id from legacy_lessons where lesson_number = 41), 3, 'Bible Project Video: Revela...',     'fill_in_upload', true, 'draft'),
+  ((select id from legacy_lessons where lesson_number = 41), 4, 'Bible Project Video: Revela...',     'fill_in_upload', true, 'draft');
