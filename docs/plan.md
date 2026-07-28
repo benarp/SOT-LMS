@@ -1,5 +1,5 @@
 # SOT-LMS — Project Plan
-**Last updated:** July 14, 2026  
+**Last updated:** July 27, 2026  
 **Owner:** Ben Arp, All Peoples Church
 
 ---
@@ -261,6 +261,28 @@ Not started. Would notify students when new homework is posted or an announcemen
 
 ---
 
+### 7. Legacy Curriculum Migration (2025 cohort)
+`apps/web/supabase/migration-legacy-curriculum-2025.sql` archives the full lesson/step structure
+the 2025 cohort used on last year's (different, non-SOT-LMS) homework platform — all 39 lessons
+(1–17, 19, 21–41; 18 and 20 don't exist in the source numbering), each with ordered steps typed
+`content` / `multiple_choice` / `fill_in_upload`. It's a standalone archive, **not yet run against
+Supabase** and not wired into any app code — the old model (multi-step lessons with quizzes)
+doesn't map cleanly onto the current one-item-per-week `weeks`/`homework_items` model.
+
+**Remaining work, not started:**
+- [ ] Run the migration in the Supabase SQL editor to actually load the archive
+- [ ] Fill in per-step detail that didn't fit in the source admin UI's list view: full titles
+      (several are truncated, e.g. `"Bible Reading Check-In [Du..."`), day-by-day reading lists,
+      and multiple-choice question bank contents
+- [ ] Decide how much of the old structure to carry forward — the 2025 curriculum had per-lesson
+      quizzes and multi-video "Fill In + Upload" steps that don't exist in today's `homework_items`
+      types (`bible_reading`, `book_reading`, `video`, `reflection`, `book_reflection`); either
+      extend those types or intentionally simplify when porting
+- [ ] Reconfigure/remap the archived lessons into `school_years`/`weeks`/`homework_items` for the
+      current class year, once the above decision is made and the current year's calendar is set
+
+---
+
 ## Database Schema Summary
 
 | Table | Purpose |
@@ -281,3 +303,4 @@ Not started. Would notify students when new homework is posted or an announcemen
 | `billing_events` | Audit trail of every charge, failure, pause/resume, credit, refund, and offline cash/check payment |
 | `application_fields` | Admin-authored questionnaire per school year; type, options, branching rule, sort order |
 | `application_answers` | Applicant answers, snapshotting label/type/order so later form edits don't rewrite history |
+| `legacy_lessons` / `legacy_lesson_steps` | Archive of the 2025 cohort's lesson/step structure from last year's separate platform; not wired into app code — see "What's Next" #7 |
