@@ -1,16 +1,17 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   addApplicationField, updateApplicationField, deleteApplicationField, reorderApplicationFields,
 } from '@/app/actions/applicationForm'
 import {
-  type AppField, type FieldType, FIELD_TYPE_LABELS, BRANCH_SOURCE_TYPES, isAnswerable,
+  type AppField, type FieldType, type FormKey, FIELD_TYPE_LABELS, BRANCH_SOURCE_TYPES, isAnswerable,
 } from '@/lib/applicationForm'
 import QuestionnaireForm from '@/app/apply/questionnaire/QuestionnaireForm'
 
 const HAS_OPTIONS: FieldType[] = ['select', 'checkbox_group']
+const FORM_KEY_LABELS: Record<FormKey, string> = { application: 'Application', wellness: 'Wellness Survey' }
 
 type FieldWithCount = AppField & { answer_count: number }
 
@@ -21,21 +22,26 @@ function branchValueChoices(source: AppField | undefined): string[] {
 }
 
 function FieldEditor({
-  field, schoolYearId, branchSources, onDone,
+  field, schoolYearId, formKey, branchSources, onDone,
 }: {
   field: AppField | null // null = new field
   schoolYearId: string
+  formKey: FormKey
   branchSources: AppField[]
   onDone: () => void
 }) {
   const [type, setType] = useState<FieldType>(field?.type ?? 'short_text')
   const [showIfFieldId, setShowIfFieldId] = useState(field?.show_if_field_id ?? '')
+  const [showIfMode, setShowIfMode] = useState<'equals' | 'one_of'>(
+    field?.show_if_values && field.show_if_values.length > 0 ? 'one_of' : 'equals'
+  )
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
   const router = useRouter()
 
   const source = branchSources.find(f => f.id === showIfFieldId)
   const valueChoices = branchValueChoices(source)
+  const currentType = field?.type ?? type
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -55,7 +61,10 @@ function FieldEditor({
     <form onSubmit={handleSubmit} className="bg-gray-50 rounded-lg p-4 space-y-3">
       {field
         ? <input type="hidden" name="fieldId" value={field.id} />
-        : <input type="hidden" name="schoolYearId" value={schoolYearId} />}
+        : <>
+            <input type="hidden" name="schoolYearId" value={schoolYearId} />
+            <input type="hidden" name="formKey" value={formKey} />
+          </>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -70,7 +79,7 @@ function FieldEditor({
             </select>
           )}
         </div>
-        {isAnswerable(field?.type ?? type) && (
+        {isAnswerable(currentType) && (
           <label className="flex items-end gap-2 text-sm text-gray-600 pb-2 cursor-pointer">
             <input type="checkbox" name="required" defaultChecked={field?.required ?? true} className="rounded border-gray-300" />
             Required
@@ -80,41 +89,78 @@ function FieldEditor({
 
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
-          {(field?.type ?? type) === 'header' ? 'Section title' : (field?.type ?? type) === 'note' ? 'Note text' : 'Question'}
+          {currentType === 'header' ? 'Section title' : currentType === 'note' ? 'Note text' : 'Question'}
         </label>
         <textarea name="label" required rows={2} defaultValue={field?.label ?? ''} className={`${inputClass} resize-y`} />
       </div>
 
-      {isAnswerable(field?.type ?? type) && (
+      {isAnswerable(currentType) && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Hint <span className="text-gray-400">(optional, shows under the question)</span></label>
           <input name="helpText" defaultValue={field?.help_text ?? ''} className={inputClass} />
         </div>
       )}
 
-      {HAS_OPTIONS.includes(field?.type ?? type) && (
+      {HAS_OPTIONS.includes(currentType) && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Options <span className="text-gray-400">(one per line)</span></label>
           <textarea name="options" rows={4} required defaultValue={(field?.options ?? []).join('\n')} className={`${inputClass} resize-y font-mono`} />
         </div>
       )}
 
-      {isAnswerable(field?.type ?? type) && branchSources.length > 0 && (
+      {currentType === 'checkbox_group' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Only show when <span className="text-gray-400">(optional)</span></label>
-            <select name="showIfFieldId" value={showIfFieldId} onChange={e => setShowIfFieldId(e.target.value)} className={`${inputClass} bg-white`}>
-              <option value="">Always shown</option>
-              {branchSources.map(f => <option key={f.id} value={f.id}>{f.label.slice(0, 60)}</option>)}
-            </select>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Minimum selections <span className="text-gray-400">(optional)</span></label>
+            <input name="minSelect" type="number" min={0} defaultValue={field?.min_select ?? ''} className={inputClass} />
           </div>
-          {showIfFieldId && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Maximum selections <span className="text-gray-400">(optional)</span></label>
+            <input name="maxSelect" type="number" min={0} defaultValue={field?.max_select ?? ''} className={inputClass} />
+          </div>
+        </div>
+      )}
+
+      {isAnswerable(currentType) && branchSources.length > 0 && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">…is answered</label>
-              <select name="showIfValue" defaultValue={field?.show_if_value ?? ''} required className={`${inputClass} bg-white`}>
-                <option value="">Choose an answer…</option>
-                {valueChoices.map(v => <option key={v} value={v}>{v}</option>)}
+              <label className="block text-xs font-medium text-gray-600 mb-1">Only show when <span className="text-gray-400">(optional)</span></label>
+              <select name="showIfFieldId" value={showIfFieldId} onChange={e => setShowIfFieldId(e.target.value)} className={`${inputClass} bg-white`}>
+                <option value="">Always shown</option>
+                {branchSources.map(f => <option key={f.id} value={f.id}>{f.label.slice(0, 60)}</option>)}
               </select>
+            </div>
+            {showIfFieldId && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Match</label>
+                <div className="flex gap-3 pt-2">
+                  <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                    <input type="radio" name="showIfMode" value="equals" checked={showIfMode === 'equals'} onChange={() => setShowIfMode('equals')} />
+                    is exactly
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                    <input type="radio" name="showIfMode" value="one_of" checked={showIfMode === 'one_of'} onChange={() => setShowIfMode('one_of')} />
+                    is one of
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+          {showIfFieldId && showIfMode === 'equals' && (
+            <select name="showIfValue" defaultValue={field?.show_if_value ?? ''} required className={`${inputClass} bg-white`}>
+              <option value="">Choose an answer…</option>
+              {valueChoices.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+          )}
+          {showIfFieldId && showIfMode === 'one_of' && (
+            <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1.5">
+              {valueChoices.map(v => (
+                <label key={v} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input type="checkbox" name="showIfValues" value={v} defaultChecked={field?.show_if_values?.includes(v) ?? false} className="rounded border-gray-300" />
+                  {v}
+                </label>
+              ))}
             </div>
           )}
         </div>
@@ -132,17 +178,24 @@ function FieldEditor({
 }
 
 export default function FormBuilder({ fields: serverFields, schoolYearId }: { fields: FieldWithCount[]; schoolYearId: string }) {
+  const [activeFormKey, setActiveFormKey] = useState<FormKey>('application')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
   const [previewing, setPreviewing] = useState(false)
-  // Local copy so drag reorders render instantly; server refresh re-syncs it
-  const [fields, setFields] = useState(serverFields)
+  // Local copy so drag reorders render instantly; server refresh re-syncs it.
+  // Adjusted during render (not an effect) when serverFields changes identity.
+  const [allFields, setAllFields] = useState(serverFields)
+  const [syncedServerFields, setSyncedServerFields] = useState(serverFields)
+  if (serverFields !== syncedServerFields) {
+    setSyncedServerFields(serverFields)
+    setAllFields(serverFields)
+  }
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [pending, startTransition] = useTransition()
   const router = useRouter()
 
-  useEffect(() => { setFields(serverFields) }, [serverFields])
+  const fields = allFields.filter(f => f.form_key === activeFormKey)
 
   const branchSourcesBefore = (field: AppField | null) => {
     const idx = field ? fields.findIndex(f => f.id === field.id) : fields.length
@@ -160,11 +213,13 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
 
   function handleDragEnter(overIndex: number) {
     if (dragIndex === null || dragIndex === overIndex) return
-    setFields(prev => {
-      const next = [...prev]
+    setAllFields(prev => {
+      const scoped = prev.filter(f => f.form_key === activeFormKey)
+      const rest = prev.filter(f => f.form_key !== activeFormKey)
+      const next = [...scoped]
       const [moved] = next.splice(dragIndex, 1)
       next.splice(overIndex, 0, moved)
-      return next
+      return [...rest, ...next]
     })
     setDragIndex(overIndex)
   }
@@ -172,12 +227,22 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
   function handleDragEnd() {
     if (dragIndex === null) return
     setDragIndex(null)
-    run(() => reorderApplicationFields(schoolYearId, fields.map(f => f.id)))
+    run(() => reorderApplicationFields(schoolYearId, activeFormKey, fields.map(f => f.id)))
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-end mb-3">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          {(Object.keys(FORM_KEY_LABELS) as FormKey[]).map(key => (
+            <button key={key} onClick={() => { setActiveFormKey(key); setEditingId(null); setAdding(false) }}
+              className={`text-sm px-3 py-1.5 rounded-md font-medium transition-colors ${
+                activeFormKey === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              {FORM_KEY_LABELS[key]}
+            </button>
+          ))}
+        </div>
         <button onClick={() => setPreviewing(true)}
           className="text-sm text-gray-600 border border-gray-200 px-4 py-2 rounded-lg hover:border-gray-400 transition-colors">
           Preview form
@@ -189,7 +254,7 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
       {(() => {
         // Group consecutive fields under their section header. Each group
         // renders as one boxed "step" — mirroring what applicants see.
-        // Drag-and-drop still operates on the flat list via global indexes.
+        // Drag-and-drop still operates on the flat (tab-scoped) list via global indexes.
         const sections: { header: FieldWithCount | null; startIndex: number; rows: FieldWithCount[] }[] = []
         fields.forEach((f, i) => {
           if (f.type === 'header' || sections.length === 0) {
@@ -212,7 +277,7 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
           >
             {editingId === field.id ? (
               <div className="p-2">
-                <FieldEditor field={field} schoolYearId={schoolYearId} branchSources={branchSourcesBefore(field)} onDone={() => setEditingId(null)} />
+                <FieldEditor field={field} schoolYearId={schoolYearId} formKey={activeFormKey} branchSources={branchSourcesBefore(field)} onDone={() => setEditingId(null)} />
               </div>
             ) : (
               <div className="flex items-start gap-2 px-3 py-3">
@@ -222,6 +287,7 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
                     {FIELD_TYPE_LABELS[field.type]}
                     {field.required && isAnswerable(field.type) && <span className="text-red-400"> · required</span>}
                     {field.show_if_field_id && <span className="text-blue-500"> · conditional</span>}
+                    {(field.min_select != null || field.max_select != null) && <span className="text-purple-500"> · count-limited</span>}
                     {field.answer_count > 0 && <span> · {field.answer_count} answer{field.answer_count === 1 ? '' : 's'}</span>}
                   </p>
                   <p className="text-sm mt-0.5 font-medium text-gray-800">{field.label}</p>
@@ -259,7 +325,7 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
               >
                 {editingId === section.header.id ? (
                   <div className="bg-white border border-gray-200 rounded-xl p-2">
-                    <FieldEditor field={section.header} schoolYearId={schoolYearId} branchSources={branchSourcesBefore(section.header)} onDone={() => setEditingId(null)} />
+                    <FieldEditor field={section.header} schoolYearId={schoolYearId} formKey={activeFormKey} branchSources={branchSourcesBefore(section.header)} onDone={() => setEditingId(null)} />
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 bg-gray-900 text-white rounded-xl px-3 py-2.5">
@@ -294,12 +360,12 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
       })()}
 
       {fields.length === 0 && (
-        <p className="text-sm text-gray-400 py-4">No questions yet — add your first one below.</p>
+        <p className="text-sm text-gray-400 py-4">No questions yet in {FORM_KEY_LABELS[activeFormKey]} — add your first one below.</p>
       )}
 
       {adding ? (
         <div className="bg-white border border-gray-200 rounded-xl p-2">
-          <FieldEditor field={null} schoolYearId={schoolYearId} branchSources={branchSourcesBefore(null)} onDone={() => setAdding(false)} />
+          <FieldEditor field={null} schoolYearId={schoolYearId} formKey={activeFormKey} branchSources={branchSourcesBefore(null)} onDone={() => setAdding(false)} />
         </div>
       ) : (
         <button onClick={() => { setAdding(true); setEditingId(null) }}
@@ -314,7 +380,7 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
           onClick={() => setPreviewing(false)}>
           <div className="w-full max-w-2xl my-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-white">Preview — exactly what applicants see</p>
+              <p className="text-sm font-medium text-white">Preview — exactly what applicants see ({FORM_KEY_LABELS[activeFormKey]})</p>
               <button onClick={() => setPreviewing(false)}
                 className="text-sm text-white/80 hover:text-white bg-white/10 rounded-lg px-3 py-1.5">
                 Close ✕
@@ -324,8 +390,15 @@ export default function FormBuilder({ fields: serverFields, schoolYearId }: { fi
               key={fields.map(f => f.id).join(',')}
               fields={fields}
               initialAnswers={{}}
-              contact={{ full_name: '', phone: '', city: '' }}
+              contact={{
+                full_name: '', phone: '', date_of_birth: '', gender: '',
+                address_line1: '', address_line2: '', city: '', address_region: '', address_postal_code: '', address_country: '',
+                profile_photo_name: '',
+              }}
               schoolYearName="(preview)"
+              formKey={activeFormKey}
+              onSubmit={async () => ({})}
+              afterSubmitPath="#"
               preview
             />
           </div>

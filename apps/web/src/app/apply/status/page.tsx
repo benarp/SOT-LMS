@@ -25,7 +25,7 @@ export default async function ApplicationStatusPage() {
 
   const { data: app } = await supabase
     .from('applications')
-    .select('id, status, full_name, submitted_at, decided_at, decision_notes, questionnaire_submitted_at, q_testimony, agreement_accepted, reference_waiver_note')
+    .select('id, status, full_name, submitted_at, decided_at, decision_notes, questionnaire_submitted_at, wellness_submitted_at, q_testimony, agreement_accepted, reference_waiver_note')
     .eq('school_year_id', schoolYear.id)
     .eq('applicant_id', user.id)
     .single()
@@ -135,6 +135,23 @@ export default async function ApplicationStatusPage() {
 
           <StepRow
             number={4}
+            label="Health & wellness survey"
+            done={!!app.wellness_submitted_at}
+            waiting={status === 'interview' && !app.wellness_submitted_at}
+            detail={
+              app.wellness_submitted_at
+                ? 'Completed'
+                : status === 'interview'
+                ? 'Please complete this ahead of your interview.'
+                : undefined
+            }
+            action={status === 'interview' && !app.wellness_submitted_at
+              ? <Link href="/apply/wellness" className="text-xs text-gray-900 underline">Continue →</Link>
+              : null}
+          />
+
+          <StepRow
+            number={5}
             label="Decision"
             done={status === 'approved'}
             detail={status === 'approved' ? 'Accepted 🎉' : undefined}
