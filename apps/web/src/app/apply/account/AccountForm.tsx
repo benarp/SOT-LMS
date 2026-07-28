@@ -12,6 +12,7 @@ export default function AccountForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -20,9 +21,10 @@ export default function AccountForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setInfo('')
 
     if (mode === 'signup') {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -32,6 +34,15 @@ export default function AccountForm() {
       })
       if (signUpError) {
         setError(signUpError.message)
+        setLoading(false)
+        return
+      }
+      if (!data.session) {
+        // Email confirmation required — no session yet, so there's nothing
+        // to set up on this account until they click the confirmation link.
+        // /auth/callback finishes the setup (role + application row) once
+        // that happens.
+        setInfo("Check your email to confirm your account. Once you click the link, you'll be able to continue your application.")
         setLoading(false)
         return
       }
@@ -108,6 +119,7 @@ export default function AccountForm() {
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {info && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{info}</p>}
 
           <button
             type="submit"

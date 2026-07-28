@@ -12,15 +12,23 @@ const ADMIN_EMAIL = FROM_EMAIL
 
 // ─── Applicant: initialize account after signup ───────────────────────────────
 
-export async function initApplicant(fullName: string): Promise<{ error?: string }> {
-  const supabase = await createClient()
+/**
+ * Sets the applicant role + creates the applications row for a freshly
+ * signed-up user. Idempotent and callable from anywhere a session is known
+ * to exist for this user — both right after signUp() (when email
+ * confirmation is off and a session exists immediately) and from
+ * /auth/callback (the authoritative fallback once confirmation completes,
+ * since signUp() alone doesn't establish a session when confirmation is on).
+ */
+export async function ensureApplicant(userId: string, fullName: string): Promise<{ error?: string }> {
   const admin = createAdminClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  // Don't clobber real staff/alumni who happen to hit an /apply-bound callback
+  const { data: existing } = await admin.from('profiles').select('role').eq('id', userId).single()
+  if (existing && existing.role !== 'student' && existing.role !== 'applicant') return {}
 
   // Update profile: set name + applicant role
-  await admin.from('profiles').update({ full_name: fullName, role: 'applicant' }).eq('id', user.id)
+  await admin.from('profiles').update({ full_name: fullName, role: 'applicant' }).eq('id', userId)
 
   // Applications belong to the open application cycle, not the active year
   const cycle = await getApplicationCycle()
@@ -30,11 +38,18 @@ export async function initApplicant(fullName: string): Promise<{ error?: string 
 
   // Create application if it doesn't exist
   await admin.from('applications').upsert(
-    { school_year_id: schoolYear.id, applicant_id: user.id, full_name: fullName },
+    { school_year_id: schoolYear.id, applicant_id: userId, full_name: fullName },
     { onConflict: 'school_year_id,applicant_id', ignoreDuplicates: true }
   )
 
   return {}
+}
+
+export async function initApplicant(fullName: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  return ensureApplicant(user.id, fullName)
 }
 
 // ─── Applicant: determine which step to show ─────────────────────────────────
