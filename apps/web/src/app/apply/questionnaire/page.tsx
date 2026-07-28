@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getApplicationCycle } from '@/lib/applicationYear'
 import { redirect } from 'next/navigation'
 import QuestionnaireForm from './QuestionnaireForm'
+import { submitQuestionnaire } from '@/app/actions/applicationForm'
 import type { AppField, AnswerMap } from '@/lib/applicationForm'
 
 export default async function QuestionnairePage() {
@@ -20,8 +21,10 @@ export default async function QuestionnairePage() {
   }
 
   const [{ data: app }, { data: fields }] = await Promise.all([
-    supabase.from('applications').select('id, status, full_name, phone, city').eq('school_year_id', schoolYear.id).eq('applicant_id', user.id).single(),
-    supabase.from('application_fields').select('*').eq('school_year_id', schoolYear.id).order('sort_order', { ascending: true }),
+    supabase.from('applications')
+      .select('id, status, full_name, phone, date_of_birth, gender, address_line1, address_line2, city, address_region, address_postal_code, address_country, profile_photo_name, honesty_acknowledged_at')
+      .eq('school_year_id', schoolYear.id).eq('applicant_id', user.id).single(),
+    supabase.from('application_fields').select('*').eq('school_year_id', schoolYear.id).eq('form_key', 'application').order('sort_order', { ascending: true }),
   ])
 
   // Anything past draft (reference stage onward) belongs on the status page
@@ -53,8 +56,24 @@ export default async function QuestionnairePage() {
       <QuestionnaireForm
         fields={(fields ?? []) as AppField[]}
         initialAnswers={answers}
-        contact={{ full_name: app?.full_name ?? '', phone: app?.phone ?? '', city: app?.city ?? '' }}
+        contact={{
+          full_name: app?.full_name ?? '',
+          phone: app?.phone ?? '',
+          date_of_birth: app?.date_of_birth ?? '',
+          gender: app?.gender ?? '',
+          address_line1: app?.address_line1 ?? '',
+          address_line2: app?.address_line2 ?? '',
+          city: app?.city ?? '',
+          address_region: app?.address_region ?? '',
+          address_postal_code: app?.address_postal_code ?? '',
+          address_country: app?.address_country ?? '',
+          profile_photo_name: app?.profile_photo_name ?? '',
+        }}
         schoolYearName={schoolYear.name}
+        formKey="application"
+        onSubmit={submitQuestionnaire}
+        afterSubmitPath="/apply/reference"
+        initialHonestyAcknowledged={!!app?.honesty_acknowledged_at}
       />
     </div>
   )

@@ -40,7 +40,7 @@ export async function initApplicant(fullName: string): Promise<{ error?: string 
 // ─── Applicant: determine which step to show ─────────────────────────────────
 
 export async function getApplicationStep(): Promise<{
-  step: 'questionnaire' | 'reference' | 'status'
+  step: 'questionnaire' | 'reference' | 'wellness' | 'status'
   applicationId?: string
 }> {
   const supabase = await createClient()
@@ -52,7 +52,7 @@ export async function getApplicationStep(): Promise<{
 
   const { data: app } = await supabase
     .from('applications')
-    .select('id, status, questionnaire_submitted_at, q_testimony, q_why_attend, q_goals, q_serving, agreement_accepted')
+    .select('id, status, questionnaire_submitted_at, wellness_submitted_at, q_testimony, q_why_attend, q_goals, q_serving, agreement_accepted')
     .eq('school_year_id', schoolYear.id)
     .eq('applicant_id', user.id)
     .single()
@@ -67,12 +67,16 @@ export async function getApplicationStep(): Promise<{
 
   if (!step1Done) return { step: 'questionnaire', applicationId: app.id }
 
-  // Reference requested or later = go to status
-  if (app.status !== 'draft') {
-    return { step: 'status', applicationId: app.id }
+  if (app.status === 'draft') return { step: 'reference', applicationId: app.id }
+
+  // Pipeline: questionnaire → reference → interview → wellness survey → decision.
+  // The wellness survey unlocks once the app reaches the interview stage
+  // (set automatically when the pastoral reference is submitted/waived).
+  if (app.status === 'interview' && !app.wellness_submitted_at) {
+    return { step: 'wellness', applicationId: app.id }
   }
 
-  return { step: 'reference', applicationId: app.id }
+  return { step: 'status', applicationId: app.id }
 }
 
 // ─── Step 2: Save pastor info & send reference email ─────────────────────────

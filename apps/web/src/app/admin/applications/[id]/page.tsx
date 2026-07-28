@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import DecisionButtons from './DecisionButtons'
 import Link from 'next/link'
@@ -32,7 +33,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       .order('field_sort', { ascending: true }),
     supabase
       .from('application_fields')
-      .select('id, show_if_field_id, show_if_value')
+      .select('id, form_key, show_if_field_id, show_if_value, show_if_values')
       .eq('school_year_id', app.school_year_id),
   ])
 
@@ -40,18 +41,33 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   // changed a controlling answer after answering the dependent question)
   const answerByField = new Map((answerRows ?? []).map(a => [a.field_id, a.value as string | string[]]))
   const conditionByField = new Map((currentFields ?? []).map(f => [f.id, f]))
-  const dynamicAnswers = (answerRows ?? []).filter(a => {
-    const cond = conditionByField.get(a.field_id)
-    if (!cond?.show_if_field_id || !cond.show_if_value) return true
+  const isAnswerVisible = (fieldId: string): boolean => {
+    const cond = conditionByField.get(fieldId)
+    if (!cond?.show_if_field_id) return true
+    const accepted = cond.show_if_values && cond.show_if_values.length > 0
+      ? cond.show_if_values as string[]
+      : cond.show_if_value ? [cond.show_if_value] : null
+    if (!accepted) return true
     const controlling = answerByField.get(cond.show_if_field_id)
     if (controlling === undefined) return false
-    return Array.isArray(controlling) ? controlling.includes(cond.show_if_value) : controlling === cond.show_if_value
-  })
+    return Array.isArray(controlling) ? controlling.some(v => accepted.includes(v)) : accepted.includes(controlling)
+  }
+  const visibleAnswers = (answerRows ?? []).filter(a => isAnswerVisible(a.field_id))
+  const wellnessFieldIds = new Set((currentFields ?? []).filter(f => f.form_key === 'wellness').map(f => f.id))
+  const dynamicAnswers = visibleAnswers.filter(a => !wellnessFieldIds.has(a.field_id))
+  const wellnessAnswers = visibleAnswers.filter(a => wellnessFieldIds.has(a.field_id))
 
   const profile = Array.isArray(app.profiles) ? app.profiles[0] : app.profiles
   const email = (profile as { email?: string } | null)?.email ?? ''
 
   const isDecided = app.status === 'approved' || app.status === 'denied'
+
+  let photoUrl: string | null = null
+  if (app.profile_photo_path) {
+    const admin = createAdminClient()
+    const { data: signed } = await admin.storage.from('applicant-photos').createSignedUrl(app.profile_photo_path, 3600)
+    photoUrl = signed?.signedUrl ?? null
+  }
 
   return (
     <div className="max-w-2xl">
@@ -64,16 +80,38 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       {/* Header */}
       <div className="bg-white border border-gray-200 rounded-xl px-6 py-5 mb-5">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">{app.full_name}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">{email}</p>
-            {app.phone && <p className="text-sm text-gray-400">{app.phone} {app.city && `· ${app.city}`}</p>}
+          <div className="flex items-start gap-4">
+            {photoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl} alt="" className="w-16 h-16 rounded-full object-cover border border-gray-200" />
+            )}
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">{app.full_name}</h1>
+              <p className="text-sm text-gray-400 mt-0.5">{email}</p>
+              {app.phone && <p className="text-sm text-gray-400">{app.phone} {app.city && `· ${app.city}`}</p>}
+              {(app.date_of_birth || app.gender) && (
+                <p className="text-sm text-gray-400">{app.date_of_birth} {app.gender && `· ${app.gender}`}</p>
+              )}
+              {app.address_line1 && (
+                <p className="text-sm text-gray-400">
+                  {[app.address_line1, app.address_line2, app.city, app.address_region, app.address_postal_code, app.address_country]
+                    .filter(Boolean).join(', ')}
+                </p>
+              )}
+            </div>
           </div>
           <StatusBadge status={app.status} />
         </div>
         {app.submitted_at && (
           <p className="text-xs text-gray-400 mt-3">
             Submitted {new Date(app.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            {app.honesty_acknowledged_at && ' · honesty statement acknowledged'}
+          </p>
+        )}
+        {app.wellness_submitted_at && (
+          <p className="text-xs text-gray-400 mt-1">
+            Wellness survey submitted {new Date(app.wellness_submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            {app.wellness_honesty_acknowledged_at && ' · honesty statement acknowledged'}
           </p>
         )}
         {isDecided && app.decision_notes && (
@@ -120,6 +158,25 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           </>
         )}
       </div>
+
+      {/* Health & wellness survey answers */}
+      {wellnessAnswers.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl px-6 py-5 mb-5 space-y-6">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Health & wellness survey</h2>
+          {wellnessAnswers.map(a => (
+            <div key={a.field_id}>
+              <p className="text-xs font-medium text-gray-500 mb-1">{a.field_label}</p>
+              {Array.isArray(a.value) ? (
+                <ul className="text-sm text-gray-800 space-y-1">
+                  {(a.value as string[]).map(v => <li key={v} className="flex gap-2"><span className="text-green-600">✓</span><span>{v}</span></li>)}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-800 whitespace-pre-wrap">{String(a.value ?? '')}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Pastoral reference */}
       <div className="bg-white border border-gray-200 rounded-xl px-6 py-5 mb-5">
