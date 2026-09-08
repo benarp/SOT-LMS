@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
+import { formatDueDate, isPastDue } from '@/lib/dueDate'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -91,7 +92,7 @@ export default async function LeaderStudentDetailPage({ params }: { params: Prom
         {(weeks || []).map(week => {
           const weekItems = (items || []).filter(i => i.week_id === week.id)
           const completedCount = weekItems.filter(i => submissionMap.has(i.id)).length
-          const isPast = new Date(week.due_date) < new Date()
+          const isPast = isPastDue(week.due_date)
           if (!isPast) return null
 
           return (
@@ -100,7 +101,7 @@ export default async function LeaderStudentDetailPage({ params }: { params: Prom
                 <div>
                   <p className="text-sm font-medium text-gray-900">{week.title}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Due {new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    Due {formatDueDate(week.due_date, { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
                 <span className={`text-sm font-medium ${completedCount === weekItems.length ? 'text-green-600' : 'text-red-500'}`}>

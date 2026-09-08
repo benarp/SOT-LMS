@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
+import { formatDueDate } from '@/lib/dueDate'
 
 export default async function LeaderOverviewPage() {
   const supabase = await createClient()
@@ -134,7 +135,7 @@ export default async function LeaderOverviewPage() {
                 {weekStats.map((week, i) => (
                   <tr key={week.id} className={i < weekStats.length - 1 ? 'border-b border-gray-50' : ''}>
                     <td className="px-4 py-3 font-medium text-gray-900">{week.title}</td>
-                    <td className="px-4 py-3 text-gray-400">{new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
+                    <td className="px-4 py-3 text-gray-400">{formatDueDate(week.due_date, { month: 'short', day: 'numeric' })}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-medium ${week.completionRate >= 80 ? 'text-green-600' : week.completionRate >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                         {week.completionRate}%

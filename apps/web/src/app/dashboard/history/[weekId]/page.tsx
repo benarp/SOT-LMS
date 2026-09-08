@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import HomeworkFeed from '@/components/HomeworkFeed'
 import { asBiblePlan, frozenMap, visibleItems } from '@/lib/biblePlan'
+import { formatDueDate } from '@/lib/dueDate'
 
 export default async function WeekDetailPage({ params }: { params: Promise<{ weekId: string }> }) {
   const { weekId } = await params
@@ -79,7 +80,7 @@ export default async function WeekDetailPage({ params }: { params: Promise<{ wee
       <div className="mb-6">
         <h1 className="text-2xl font-medium text-gray-900">{week.title}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Due {dueDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          Due {formatDueDate(week.due_date, { weekday: 'long', month: 'long', day: 'numeric' })}
           {' · '}
           {completedCount} of {feedItems.length} completed
         </p>

@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { adjustOpenCount } from '../../lib/openAssignments'
 import { useTheme, type ThemeColors } from '../../lib/theme'
 import { asBiblePlan, frozenMap, visibleItems } from '../../lib/biblePlan'
+import { formatDueDate, isPastDue } from '../../lib/dueDate'
 
 type HomeworkItem = {
   id: string
@@ -103,8 +104,7 @@ export default function ThisWeekScreen() {
     adjustOpenCount(newCompleted ? -1 : 1)
 
     if (newCompleted) {
-      const due = dueDate ? new Date(dueDate) : new Date()
-      const isLate = new Date() > due
+      const isLate = dueDate ? isPastDue(dueDate) : false
       const { error } = await supabase.from('submissions').upsert({
         student_id: userId,
         homework_item_id: item.id,
@@ -140,7 +140,7 @@ export default function ThisWeekScreen() {
 
   const completedCount = items.filter(i => i.completed).length
   const progress = items.length > 0 ? completedCount / items.length : 0
-  const isOverdue = dueDate ? dueDate < new Date() : false
+  const isOverdue = dueDate ? isPastDue(dueDate) : false
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -189,7 +189,7 @@ export default function ThisWeekScreen() {
               <Text style={styles.weekTitle}>{weekTitle}</Text>
               <Text style={[styles.dueDate, isOverdue && styles.overdue]}>
                 {isOverdue ? 'Overdue — ' : 'Due '}
-                {dueDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                {dueDate ? formatDueDate(dueDate, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}
               </Text>
             </View>
 

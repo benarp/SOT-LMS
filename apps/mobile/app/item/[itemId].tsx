@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase'
 import { adjustOpenCount } from '../../lib/openAssignments'
 import { useTheme, type ThemeColors } from '../../lib/theme'
 import { asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '../../lib/biblePlan'
+import { isPastDue } from '../../lib/dueDate'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const VIDEO_HEIGHT = Math.round((SCREEN_WIDTH - 32) * 9 / 16)
@@ -114,7 +115,7 @@ export default function ItemDetailScreen() {
   async function markComplete() {
     if (!item || item.completed || completing) return
     setCompleting(true)
-    const isLate = item.due_date ? new Date() > new Date(item.due_date) : false
+    const isLate = item.due_date ? isPastDue(item.due_date) : false
     const { error } = await supabase.from('submissions').upsert({
       student_id: userId,
       homework_item_id: itemId,
@@ -139,7 +140,7 @@ export default function ItemDetailScreen() {
       return
     }
     setSavingResponse(true)
-    const isLate = item.due_date ? new Date() > new Date(item.due_date) : false
+    const isLate = item.due_date ? isPastDue(item.due_date) : false
     const { error } = await supabase.from('submissions').upsert({
       student_id: userId,
       homework_item_id: itemId,

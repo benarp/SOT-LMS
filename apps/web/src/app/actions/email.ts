@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
 import { asBiblePlan, itemVisibleToPlan } from '@/lib/biblePlan'
+import { formatDueDate } from '@/lib/dueDate'
 
 function escapeHtml(value: string): string {
   return value
@@ -41,9 +42,7 @@ function buildEmailHtml({
   schoolYear: { name: string }
   unsubscribeUrl?: string
 }) {
-  const dueDate = new Date(week.due_date).toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
-  })
+  const dueDate = formatDueDate(week.due_date, { weekday: 'long', month: 'long', day: 'numeric' })
 
   const announcementsHtml = announcements.length > 0
     ? `

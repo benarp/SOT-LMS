@@ -10,6 +10,7 @@ import ImpersonateButton from '@/components/admin/ImpersonateButton'
 import BillingPanel from './BillingPanel'
 import { outstandingCents } from '@/lib/billing'
 import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
+import { formatDueDate, isPastDue } from '@/lib/dueDate'
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -191,7 +192,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               const itemIds = visibleItemsForWeek(week).map(i => i.id)
               const completed = itemIds.filter(itemId => completedIds.has(itemId)).length
               const total = itemIds.length
-              const pastDue = new Date(week.due_date) < new Date()
+              const pastDue = isPastDue(week.due_date)
               const status =
                 total === 0 ? null : completed >= total ? 'done' : pastDue ? 'late' : 'open'
               return (
@@ -201,7 +202,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                       Week {week.week_number} — {week.title}
                     </p>
                     <p className="text-xs text-gray-400">
-                      Due {new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      Due {formatDueDate(week.due_date, { month: 'short', day: 'numeric' })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

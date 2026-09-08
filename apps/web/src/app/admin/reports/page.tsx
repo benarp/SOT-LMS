@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
+import { formatDueDate, isPastDue } from '@/lib/dueDate'
 
 export default async function ReportsPage() {
   const supabase = await createClient()
@@ -46,7 +47,7 @@ export default async function ReportsPage() {
   }
 
   // Per-week stats (past weeks only)
-  const pastWeeks = (weeks || []).filter(w => new Date(w.due_date) < new Date())
+  const pastWeeks = (weeks || []).filter(w => isPastDue(w.due_date))
   const weekStats = pastWeeks.map(week => {
     let totalPossible = 0
     let submitted = 0
@@ -75,7 +76,7 @@ export default async function ReportsPage() {
       const weekCompleted = weekItems.filter(i => submissionSet.has(`${student.id}:${i.id}`))
       completed += weekCompleted.length
       late += weekItems.filter(i => lateSet.has(`${student.id}:${i.id}`)).length
-      const isPast = new Date(week.due_date) < new Date()
+      const isPast = isPastDue(week.due_date)
       if (isPast && weekCompleted.length < weekItems.length) overdue++
     }
     return { ...student, completed, late, overdue, totalItems }
@@ -131,7 +132,7 @@ export default async function ReportsPage() {
                     <td className="px-4 py-3 font-medium text-gray-900">
                       <Link href={`/admin/reports/${week.id}`} className="hover:underline">{week.title}</Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-400">{new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
+                    <td className="px-4 py-3 text-gray-400">{formatDueDate(week.due_date, { month: 'short', day: 'numeric' })}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-medium ${week.completionRate >= 80 ? 'text-green-600' : week.completionRate >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                         {week.completionRate}%

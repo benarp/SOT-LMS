@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import AddWeekForm from '@/components/admin/AddWeekForm'
+import { formatDueDate } from '@/lib/dueDate'
 
 export default async function CurriculumPage() {
   const supabase = await createClient()
@@ -54,7 +55,7 @@ export default async function CurriculumPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{week.title}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Due {new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  Due {formatDueDate(week.due_date, { month: 'short', day: 'numeric' })}
                   {' · '}
                   {itemCountMap.get(week.id) || 0} items
                 </p>

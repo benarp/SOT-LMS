@@ -3,6 +3,7 @@ import CreateAnnouncementForm from '@/components/admin/CreateAnnouncementForm'
 import DeleteAnnouncementButton from '@/components/admin/DeleteAnnouncementButton'
 import SendWeeklyEmailButton from '@/components/admin/SendWeeklyEmailButton'
 import SendTestEmailButton from '@/components/admin/SendTestEmailButton'
+import { formatDueDate } from '@/lib/dueDate'
 
 export default async function AnnouncementsPage() {
   const supabase = await createClient()
@@ -47,7 +48,7 @@ export default async function AnnouncementsPage() {
             {nextWeek ? (
               <p className="text-sm text-gray-400">
                 Will send Week {nextWeek.week_number} — <span className="text-gray-600">{nextWeek.title}</span>
-                {' '}· due {new Date(nextWeek.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {' '}· due {formatDueDate(nextWeek.due_date, { month: 'short', day: 'numeric' })}
                 {' '}· with {(announcements || []).filter(a => new Date(a.publish_at) <= new Date()).length} active announcement{(announcements || []).filter(a => new Date(a.publish_at) <= new Date()).length !== 1 ? 's' : ''}
               </p>
             ) : (

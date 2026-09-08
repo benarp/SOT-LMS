@@ -6,6 +6,7 @@ import GroupAssignSelect from '@/components/admin/GroupAssignSelect'
 import UsersTable, { type UserRow } from './UsersTable'
 import { BILLING_STATUS_LABELS } from '@/lib/billing'
 import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
+import { isPastDue } from '@/lib/dueDate'
 
 function splitName(full: string | null): { firstName: string; lastName: string } {
   if (!full) return { firstName: '', lastName: '' }
@@ -73,7 +74,7 @@ export default async function UsersPage() {
   // Compute homework status for students
   let homeworkStatusMap: Record<string, 'current' | 'late'> = {}
   if (currentWeek) {
-    const isPastDue = new Date(currentWeek.due_date) < new Date()
+    const weekIsPastDue = isPastDue(currentWeek.due_date)
     const { data: items } = await supabase
       .from('homework_items')
       .select('id, bible_plan')
@@ -105,7 +106,7 @@ export default async function UsersPage() {
         const completed = visible.filter(i => submissionSet.has(`${profile.id}:${i.id}`)).length
         if (completed >= visible.length) {
           homeworkStatusMap[profile.id] = 'current'
-        } else if (isPastDue) {
+        } else if (weekIsPastDue) {
           homeworkStatusMap[profile.id] = 'late'
         }
       }

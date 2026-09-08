@@ -8,6 +8,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { fetchOpenAssignments, adjustOpenCount, type OpenWeek } from '../../lib/openAssignments'
 import { useTheme, type ThemeColors } from '../../lib/theme'
+import { formatDueDate, isPastDue } from '../../lib/dueDate'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -46,7 +47,7 @@ export default function OpenAssignmentsScreen() {
       .filter(w => w.items.length > 0))
     adjustOpenCount(-1)
 
-    const isLate = new Date() > new Date(dueDate)
+    const isLate = isPastDue(dueDate)
     const { error } = await supabase.from('submissions').upsert({
       student_id: userId,
       homework_item_id: itemId,
@@ -97,7 +98,7 @@ export default function OpenAssignmentsScreen() {
                 </Text>
                 <Text style={[styles.weekDue, week.isPastDue && styles.weekOverdue]}>
                   {week.isPastDue ? 'Past due ' : 'Due '}
-                  {new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {formatDueDate(week.due_date, { month: 'short', day: 'numeric' })}
                 </Text>
               </View>
               <View style={styles.itemsList}>

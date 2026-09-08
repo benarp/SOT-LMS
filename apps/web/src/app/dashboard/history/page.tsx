@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { asBiblePlan, frozenMap, visibleItems } from '@/lib/biblePlan'
+import { dueDay, formatDueDate, isPastDue, schoolToday } from '@/lib/dueDate'
 
 export default async function HistoryPage() {
   const supabase = await createClient()
@@ -64,7 +65,6 @@ export default async function HistoryPage() {
 
   // Build per-week completion counts, keeping only weeks that actually have
   // something in them for this student's plan.
-  const now = Date.now()
   const weekStats = weeks
     .map(week => {
       const weekItems = (items || []).filter(i => i.week_id === week.id)
@@ -73,7 +73,7 @@ export default async function HistoryPage() {
         ...week,
         total: weekItems.length,
         completed,
-        upcoming: new Date(week.due_date).getTime() > now,
+        upcoming: !isPastDue(week.due_date) && dueDay(week.due_date) !== schoolToday(),
       }
     })
     .filter(week => week.total > 0)
@@ -98,7 +98,6 @@ export default async function HistoryPage() {
         {weekStats.map(week => {
           const allDone = week.total > 0 && week.completed === week.total
           const noneDone = week.completed === 0
-          const dueDate = new Date(week.due_date)
 
           return (
             <Link
@@ -115,7 +114,7 @@ export default async function HistoryPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{week.title}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Due {dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                  Due {formatDueDate(week.due_date)}
                   {week.upcoming && <span className="ml-2 text-gray-300">· Upcoming</span>}
                 </p>
               </div>

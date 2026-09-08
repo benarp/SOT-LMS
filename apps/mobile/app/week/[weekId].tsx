@@ -5,6 +5,7 @@ import { useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useTheme, type ThemeColors } from '../../lib/theme'
 import { asBiblePlan, frozenMap, visibleItems } from '../../lib/biblePlan'
+import { formatDueDate } from '../../lib/dueDate'
 
 type Item = {
   id: string
@@ -86,7 +87,7 @@ export default function WeekDetailScreen() {
         <Text style={styles.weekLabel}>Week {weekNumber}</Text>
         <Text style={styles.weekTitle}>{weekTitle}</Text>
         <Text style={styles.dueDate}>
-          Due {dueDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          Due {dueDate ? formatDueDate(dueDate, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}
           {'  ·  '}
           {completedCount} of {items.length} completed
         </Text>

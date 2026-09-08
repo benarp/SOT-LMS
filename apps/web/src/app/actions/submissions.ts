@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { isPastDue } from '@/lib/dueDate'
 
 const UPLOAD_BUCKET = 'homework-uploads'
 
@@ -11,7 +12,7 @@ export async function markComplete(homeworkItemId: string, weekDueDate: string) 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const isLate = new Date(weekDueDate) < new Date()
+  const isLate = isPastDue(weekDueDate)
 
   const { error } = await supabase.from('submissions').upsert({
     student_id: user.id,
@@ -35,7 +36,7 @@ export async function submitReflection(
   if (!user) return { error: 'Not authenticated' }
   if (!responseText.trim()) return { error: 'Type your response or add a photo — either one works.' }
 
-  const isLate = new Date(weekDueDate) < new Date()
+  const isLate = isPastDue(weekDueDate)
 
   const { error } = await supabase.from('submissions').upsert({
     student_id: user.id,
@@ -76,7 +77,7 @@ export async function saveReflectionFile(
     .eq('homework_item_id', homeworkItemId)
     .maybeSingle()
 
-  const isLate = new Date(weekDueDate) < new Date()
+  const isLate = isPastDue(weekDueDate)
   const { error } = await supabase.from('submissions').upsert({
     student_id: user.id,
     homework_item_id: homeworkItemId,

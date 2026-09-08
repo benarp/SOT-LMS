@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useTheme, type ThemeColors } from '../../lib/theme'
 import { asBiblePlan, frozenMap, visibleItems } from '../../lib/biblePlan'
+import { dueDay, formatDueDate, isPastDue, schoolToday } from '../../lib/dueDate'
 
 type Week = {
   id: string
@@ -64,7 +65,6 @@ export default function HistoryScreen() {
       itemsByWeek.get(item.week_id)!.push(item.id)
     }
 
-    const now = Date.now()
     setWeeks(allWeeks.map(w => {
       const weekItems = itemsByWeek.get(w.id) || []
       const completedCount = weekItems.filter(id => submittedIds.has(id)).length
@@ -72,7 +72,7 @@ export default function HistoryScreen() {
         ...w,
         completedCount,
         totalCount: weekItems.length,
-        upcoming: new Date(w.due_date).getTime() > now,
+        upcoming: !isPastDue(w.due_date) && dueDay(w.due_date) !== schoolToday(),
       }
     }).filter(w => w.totalCount > 0))
     setLoading(false)
@@ -123,7 +123,7 @@ export default function HistoryScreen() {
                       <Text style={styles.weekLabel}>Week {week.week_number}</Text>
                       <Text style={styles.weekTitle}>{week.title}</Text>
                       <Text style={styles.dueDate}>
-                        Due {new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        Due {formatDueDate(week.due_date, { month: 'short', day: 'numeric' })}
                         {week.upcoming ? '  ·  Upcoming' : ''}
                       </Text>
                     </View>

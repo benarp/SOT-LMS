@@ -5,6 +5,7 @@ import AddHomeworkItemForm from '@/components/admin/AddHomeworkItemForm'
 import DeleteItemButton from '@/components/admin/DeleteItemButton'
 import EditItemButton from '@/components/admin/EditItemButton'
 import { BIBLE_PLAN_LABELS, asBiblePlan } from '@/lib/biblePlan'
+import { formatDueDate } from '@/lib/dueDate'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -43,7 +44,7 @@ export default async function WeekEditPage({ params }: { params: Promise<{ weekI
       <div className="mb-6">
         <h1 className="text-2xl font-medium text-gray-900">{week.title}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Due {new Date(week.due_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          Due {formatDueDate(week.due_date, { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
 

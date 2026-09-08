@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import HomeworkFeed from '@/components/HomeworkFeed'
 import { asBiblePlan, frozenMap, visibleItems } from '@/lib/biblePlan'
+import { formatDueDate, isPastDue } from '@/lib/dueDate'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -91,8 +92,7 @@ export default async function DashboardPage() {
     .order('publish_at', { ascending: false })
     .limit(3)
 
-  const dueDate = new Date(currentWeek.due_date)
-  const isOverdue = dueDate < new Date()
+  const isOverdue = isPastDue(currentWeek.due_date)
 
   return (
     <div className="max-w-2xl">
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-medium text-gray-900">{currentWeek.title}</h1>
         <p className={`text-sm mt-1 ${isOverdue ? 'text-red-500' : 'text-gray-400'}`}>
           {isOverdue ? 'Overdue — ' : 'Due '}
-          {dueDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {formatDueDate(currentWeek.due_date, { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
 

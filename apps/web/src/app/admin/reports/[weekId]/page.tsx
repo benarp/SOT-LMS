@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
+import { formatDueDate } from '@/lib/dueDate'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -84,7 +85,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
       <div className="mb-6">
         <h1 className="text-2xl font-medium text-gray-900">Week {week.week_number} — {week.title}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Due {new Date(week.due_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          Due {formatDueDate(week.due_date, { weekday: 'long', month: 'long', day: 'numeric' })}
           {' · '}Use Cmd+F (or Ctrl+F) to find a student
         </p>
       </div>
