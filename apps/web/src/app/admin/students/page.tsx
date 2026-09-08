@@ -24,7 +24,8 @@ export default async function UsersPage() {
     .eq('is_active', true)
     .single()
 
-  // Fetch all profiles (all roles), applications for phone/city, groups, and homework data in parallel
+  // Fetch all profiles (all roles), applications for city (and a phone
+  // fallback), groups, and homework data in parallel
   const [
     { data: profiles },
     { data: applications },
@@ -32,7 +33,7 @@ export default async function UsersPage() {
     { data: allYears },
     currentWeekResult,
   ] = await Promise.all([
-    admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday, bible_plan').order('full_name'),
+    admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday, phone, bible_plan').order('full_name'),
     admin.from('applications').select('applicant_id, phone, city'),
     supabase.from('groups').select('id, name').eq('school_year_id', schoolYear?.id ?? '').order('name'),
     admin.from('school_years').select('id, name'),
@@ -61,7 +62,9 @@ export default async function UsersPage() {
     (billingAccounts ?? []).map(b => [b.student_id, BILLING_STATUS_LABELS[b.status] ?? b.status])
   )
 
-  // Build phone/city lookup keyed by profile id
+  // Application answers, keyed by profile id. City lives only here — profiles
+  // has no city column — and the phone here is the fallback for anyone whose
+  // profile phone was never filled in.
   const contactByProfile: Record<string, { phone: string | null; city: string | null }> = {}
   for (const app of applications ?? []) {
     contactByProfile[app.applicant_id] = { phone: app.phone ?? null, city: app.city ?? null }
@@ -119,7 +122,11 @@ export default async function UsersPage() {
       email: p.email ?? '',
       firstName,
       lastName,
-      phone: contact.phone,
+      // profiles.phone is the canonical field — it's what the roster import and
+      // any later admin edit write. Reading only the application's phone left
+      // this column blank for every student who was imported rather than
+      // applying through the app, which is all 28 of them.
+      phone: p.phone ?? contact.phone,
       city: contact.city,
       role: p.role,
       alumniYear: p.alumni_year_id ? yearNameById.get(p.alumni_year_id) ?? null : null,
