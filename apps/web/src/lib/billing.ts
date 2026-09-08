@@ -1,5 +1,16 @@
 import Stripe from 'stripe'
 
+/**
+ * Tuition is hidden from students until the Stripe integration is finished —
+ * pre-existing per-student payment plans aren't linked to billing_accounts yet,
+ * so the page would show a student misleading or empty figures.
+ *
+ * Admins keep full access (/admin/finances and the per-student billing panel).
+ * Flip to true to republish the student-facing Tuition tab; the nav item in
+ * dashboard/layout.tsx and the route guard in proxy.ts both read this.
+ */
+export const BILLING_VISIBLE_TO_STUDENTS = false
+
 // Pricing model (docs/billing-spec.md): $400 deposit collected at checkout,
 // then $200/month × 10 months starting ~1 month later. $2,400 total.
 export const DEPOSIT_CENTS = 40000

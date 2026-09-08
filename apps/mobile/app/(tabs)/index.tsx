@@ -152,9 +152,10 @@ export default function ThisWeekScreen() {
         <View style={styles.topRow}>
           <Text style={styles.schoolName}>School of Transformation</Text>
           <View style={styles.topRowLinks}>
-            <TouchableOpacity onPress={() => router.push('/billing')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.signOut}>Tuition</Text>
-            </TouchableOpacity>
+            {/* Tuition hidden until the Stripe integration is finished — see
+                BILLING_VISIBLE_TO_STUDENTS in apps/web/src/lib/billing.ts.
+                Mobile is student-only, so it's hidden outright rather than
+                role-gated. Restore this link when tuition is republished. */}
             <TouchableOpacity onPress={() => router.push('/account')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Text style={styles.signOut}>Account</Text>
             </TouchableOpacity>

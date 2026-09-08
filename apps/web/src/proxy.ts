@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { BILLING_VISIBLE_TO_STUDENTS } from '@/lib/billing'
 
 // Pre-launch gate: students/group leaders can only set their password and see
 // the "coming soon" page until the portal is actually ready. Flip to false
@@ -71,6 +72,12 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL('/alumni', request.url))
       }
       return supabaseResponse
+    }
+
+    // Tuition is hidden from students until Stripe is finished. Hiding the nav
+    // link alone leaves the URL reachable, so block the route too.
+    if (!BILLING_VISIBLE_TO_STUDENTS && role !== 'admin' && pathname.startsWith('/dashboard/billing')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
     // Pre-launch gate — admins keep full access to finish setup
