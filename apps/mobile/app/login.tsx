@@ -81,7 +81,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={styles.applyButton}
                 activeOpacity={0.8}
-                onPress={() => Linking.openURL('https://sot-lms.vercel.app/apply')}
+                onPress={() => Linking.openURL('https://schooloftransformation.app/apply')}
               >
                 <Text style={styles.applyButtonText}>Apply now</Text>
               </TouchableOpacity>

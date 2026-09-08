@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useMemo } from 'react'
 import {
-  View, Text, ScrollView, StyleSheet, RefreshControl, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, TouchableOpacity, Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
@@ -155,6 +155,14 @@ export default function BillingScreen() {
           </View>
         )}
 
+        <TouchableOpacity
+          style={styles.webLinkButton}
+          activeOpacity={0.8}
+          onPress={() => Linking.openURL('https://schooloftransformation.app/dashboard/billing')}
+        >
+          <Text style={styles.webLinkButtonText}>Update billing details on web</Text>
+        </TouchableOpacity>
+
         <Text style={styles.footerHint}>
           Questions about your tuition, pauses, or refunds? Contact the school director — billing changes are handled by the school office.
         </Text>
@@ -217,5 +225,14 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   historyRight: { alignItems: 'flex-end', flexShrink: 0 },
   historyAmount: { fontSize: 13, fontWeight: '600', color: colors.text },
   historyDate: { fontSize: 12, color: colors.textFaint, marginTop: 2 },
+  webLinkButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  webLinkButtonText: { color: colors.text, fontWeight: '600', fontSize: 14 },
   footerHint: { fontSize: 12, color: colors.textFaint, lineHeight: 17, marginTop: 4 },
 })

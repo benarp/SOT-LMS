@@ -186,7 +186,7 @@ export default function ItemDetailScreen() {
                   </head><body>
                   <iframe src="${embedUrl}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
                   </body></html>`,
-                baseUrl: 'https://sot-lms.vercel.app',
+                baseUrl: 'https://schooloftransformation.app',
               }}
               style={{ width: SCREEN_WIDTH - 32, height: VIDEO_HEIGHT }}
               allowsInlineMediaPlayback
