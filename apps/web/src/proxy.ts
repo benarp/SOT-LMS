@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Pre-launch gate: students/group leaders can only set their password and see
+// the "coming soon" page until the portal is actually ready. Flip to false
+// (or delete this block and the /coming-soon page) when ready to launch.
+const COMING_SOON = true
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -64,6 +69,15 @@ export async function proxy(request: NextRequest) {
       const allowed = ['/alumni', '/reset-password', '/auth', '/unsubscribe']
       if (!allowed.some(p => pathname.startsWith(p))) {
         return NextResponse.redirect(new URL('/alumni', request.url))
+      }
+      return supabaseResponse
+    }
+
+    // Pre-launch gate — admins keep full access to finish setup
+    if (COMING_SOON && (role === 'student' || role === 'group_leader')) {
+      const allowed = pathname === '/coming-soon' || pathname === '/reset-password'
+      if (!allowed) {
+        return NextResponse.redirect(new URL('/coming-soon', request.url))
       }
       return supabaseResponse
     }

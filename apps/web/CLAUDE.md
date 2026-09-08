@@ -70,7 +70,7 @@ supabase/
 ```
 
 ## Database schema (16 tables)
-- `profiles` — extends auth.users; `role` (`user_role` enum), `group_id`, `birthday`, `alumni_year_id`, `email_opt_out`, `unsubscribe_token`
+- `profiles` — extends auth.users; `role` (`user_role` enum), `group_id`, `birthday`, `alumni_year_id`, `email_opt_out`, `unsubscribe_token`, `phone`, `gender` (`phone`/`gender` are admin-only — column-level `REVOKE SELECT` from `authenticated`, not visible to the owning student or their group leader)
 - `school_years` — one active at a time (`is_active`); `completed_at` when a year is finished
 - `groups` — discipleship groups, each with a `leader_id`
 - `weeks` — numbered weeks per school year, each has a `due_date`
