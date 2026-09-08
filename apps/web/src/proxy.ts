@@ -3,9 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { BILLING_VISIBLE_TO_STUDENTS } from '@/lib/billing'
 
 // Pre-launch gate: students/group leaders can only set their password and see
-// the "coming soon" page until the portal is actually ready. Flip to false
-// (or delete this block and the /coming-soon page) when ready to launch.
-const COMING_SOON = true
+// the "coming soon" page until the portal is actually ready. Flipped false at
+// launch on 2026-09-08; kept (with the /coming-soon page) so the portal can be
+// re-gated in one edit if something needs pulling back. Delete both once the
+// first few weeks have gone smoothly.
+const COMING_SOON = false
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
