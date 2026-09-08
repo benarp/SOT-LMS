@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
+import { asBiblePlan, frozenMap, visibleItems } from './biblePlan'
 
 export type OpenItem = {
   id: string
@@ -90,13 +91,19 @@ export async function fetchOpenAssignments(): Promise<{ weeks: OpenWeek[]; userI
   if (!weeks || weeks.length === 0) { setOpenCount(0); return { weeks: [], userId: user.id } }
 
   const weekIds = weeks.map(w => w.id)
-  const [{ data: items }, { data: subs }] = await Promise.all([
+  const [{ data: allItems }, { data: subs }, { data: profile }, { data: frozenRows }] = await Promise.all([
     supabase.from('homework_items')
-      .select('id, week_id, type, title, description, sort_order')
+      .select('id, week_id, type, title, description, sort_order, bible_plan')
       .in('week_id', weekIds)
       .order('sort_order'),
     supabase.from('submissions').select('homework_item_id').eq('student_id', user.id),
+    supabase.from('profiles').select('bible_plan').eq('id', user.id).single(),
+    supabase.from('student_week_plans').select('week_id, plan').eq('student_id', user.id).in('week_id', weekIds),
   ])
+
+  // Scope to the student's reading plan before anything is counted — this also
+  // feeds the tab badge, so an unfiltered list would overstate what's open.
+  const items = visibleItems(allItems, asBiblePlan(profile?.bible_plan), frozenMap(frozenRows))
 
   const submittedIds = new Set((subs || []).map(s => s.homework_item_id))
   const now = new Date()

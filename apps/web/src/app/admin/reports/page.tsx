@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 
 export default async function ReportsPage() {
   const supabase = await createClient()
@@ -11,7 +12,7 @@ export default async function ReportsPage() {
     .single()
 
   const [{ data: students }, { data: weeks }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, email, group_id').eq('role', 'student').order('full_name'),
+    supabase.from('profiles').select('id, full_name, email, group_id, bible_plan').eq('role', 'student').order('full_name'),
     supabase.from('weeks').select('id, week_number, title, due_date').eq('school_year_id', schoolYear?.id || '').order('week_number', { ascending: false }),
   ])
 
@@ -20,7 +21,7 @@ export default async function ReportsPage() {
 
   const { data: allItems } = await supabase
     .from('homework_items')
-    .select('id, week_id')
+    .select('id, week_id, bible_plan')
     .in('week_id', weekIds.length > 0 ? weekIds : ['none'])
 
   const { data: allSubmissions } = await supabase
@@ -28,30 +29,55 @@ export default async function ReportsPage() {
     .select('student_id, homework_item_id, completed_at, is_late')
     .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
 
+  // Students are on different Bible reading plans, so totals are summed
+  // per student rather than multiplying one item count by the headcount.
+  const { data: frozenRows } = await supabase
+    .from('student_week_plans')
+    .select('student_id, week_id, plan')
+    .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
+
+  const frozenByStudent = frozenMapByStudent(frozenRows)
   const submissionSet = new Set((allSubmissions || []).map(s => `${s.student_id}:${s.homework_item_id}`))
   const lateSet = new Set((allSubmissions || []).filter(s => s.is_late).map(s => `${s.student_id}:${s.homework_item_id}`))
+
+  function itemsFor(studentId: string, currentPlan: string | null | undefined, weekId: string) {
+    const plan = planForWeek(weekId, asBiblePlan(currentPlan), frozenByStudent.get(studentId))
+    return (allItems || []).filter(i => i.week_id === weekId && itemVisibleToPlan(i, plan))
+  }
 
   // Per-week stats (past weeks only)
   const pastWeeks = (weeks || []).filter(w => new Date(w.due_date) < new Date())
   const weekStats = pastWeeks.map(week => {
-    const weekItems = (allItems || []).filter(i => i.week_id === week.id)
-    const totalPossible = weekItems.length * (students || []).length
-    const submitted = (allSubmissions || []).filter(s => weekItems.some(i => i.id === s.homework_item_id)).length
-    const lateCount = (allSubmissions || []).filter(s => s.is_late && weekItems.some(i => i.id === s.homework_item_id)).length
+    let totalPossible = 0
+    let submitted = 0
+    let lateCount = 0
+    for (const student of students || []) {
+      for (const item of itemsFor(student.id, student.bible_plan, week.id)) {
+        totalPossible++
+        const key = `${student.id}:${item.id}`
+        if (submissionSet.has(key)) submitted++
+        if (lateSet.has(key)) lateCount++
+      }
+    }
     const completionRate = totalPossible > 0 ? Math.round((submitted / totalPossible) * 100) : 0
     return { ...week, completionRate, lateCount, totalSubmissions: submitted, totalPossible }
   })
 
   // Per-student stats
   const studentStats = (students || []).map(student => {
-    const totalItems = (allItems || []).length
-    const completed = (allSubmissions || []).filter(s => s.student_id === student.id).length
-    const late = (allSubmissions || []).filter(s => s.student_id === student.id && s.is_late).length
-    const overdue = pastWeeks.reduce((count, week) => {
-      const weekItems = (allItems || []).filter(i => i.week_id === week.id)
-      const weekCompleted = weekItems.filter(i => submissionSet.has(`${student.id}:${i.id}`)).length
-      return count + (weekCompleted < weekItems.length ? 1 : 0)
-    }, 0)
+    let totalItems = 0
+    let completed = 0
+    let late = 0
+    let overdue = 0
+    for (const week of weeks || []) {
+      const weekItems = itemsFor(student.id, student.bible_plan, week.id)
+      totalItems += weekItems.length
+      const weekCompleted = weekItems.filter(i => submissionSet.has(`${student.id}:${i.id}`))
+      completed += weekCompleted.length
+      late += weekItems.filter(i => lateSet.has(`${student.id}:${i.id}`)).length
+      const isPast = new Date(week.due_date) < new Date()
+      if (isPast && weekCompleted.length < weekItems.length) overdue++
+    }
     return { ...student, completed, late, overdue, totalItems }
   })
 

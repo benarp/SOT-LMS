@@ -65,6 +65,18 @@ export default function AddHomeworkItemForm({ weekId, nextSortOrder }: { weekId:
         <input name="description" placeholder="Additional context for students" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
       </div>
 
+      {type === 'bible_reading' && (
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Reading plan</label>
+          <select name="biblePlan" defaultValue="both" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
+            <option value="both">Both plans</option>
+            <option value="shorter">Shorter Plan only</option>
+            <option value="whole">Whole Bible Plan only</option>
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Students only see readings for the plan they&apos;re on.</p>
+        </div>
+      )}
+
       {(type === 'bible_reading' || type === 'book_reading' || type === 'reflection') && (
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -23,7 +24,7 @@ export default async function LeaderStudentDetailPage({ params }: { params: Prom
 
   const { data: student } = await supabase
     .from('profiles')
-    .select('id, full_name, email, group_id')
+    .select('id, full_name, email, group_id, bible_plan')
     .eq('id', studentId)
     .single()
 
@@ -42,11 +43,22 @@ export default async function LeaderStudentDetailPage({ params }: { params: Prom
     .order('week_number', { ascending: false })
 
   const weekIds = (weeks || []).map(w => w.id)
-  const { data: items } = await supabase
-    .from('homework_items')
-    .select('id, week_id, type, title, sort_order')
-    .in('week_id', weekIds.length > 0 ? weekIds : ['none'])
-    .order('sort_order', { ascending: true })
+  const [{ data: allItems }, { data: frozenRows }] = await Promise.all([
+    supabase
+      .from('homework_items')
+      .select('id, week_id, type, title, sort_order, bible_plan')
+      .in('week_id', weekIds.length > 0 ? weekIds : ['none'])
+      .order('sort_order', { ascending: true }),
+    supabase.from('student_week_plans').select('week_id, plan').eq('student_id', studentId),
+  ])
+
+  // Only show what this student was actually assigned, per their reading plan
+  // at the time of each week.
+  const currentPlan = asBiblePlan(student.bible_plan)
+  const frozen = frozenMap(frozenRows)
+  const items = (allItems || []).filter(i =>
+    itemVisibleToPlan(i, planForWeek(i.week_id, currentPlan, frozen))
+  )
 
   const itemIds = (items || []).map(i => i.id)
   const { data: submissions } = await supabase
@@ -68,7 +80,11 @@ export default async function LeaderStudentDetailPage({ params }: { params: Prom
 
       <div className="mb-6">
         <h1 className="text-2xl font-medium text-gray-900">{student.full_name || '—'}</h1>
-        <p className="text-sm text-gray-400 mt-1">{student.email}</p>
+        <p className="text-sm text-gray-400 mt-1">
+          {student.email}
+          {' · '}
+          <span className="text-gray-500">{BIBLE_PLAN_LABELS[currentPlan]}</span>
+        </p>
       </div>
 
       <div className="space-y-4">

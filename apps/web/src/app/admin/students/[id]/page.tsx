@@ -9,6 +9,7 @@ import GroupAssignSelect from '@/components/admin/GroupAssignSelect'
 import ImpersonateButton from '@/components/admin/ImpersonateButton'
 import BillingPanel from './BillingPanel'
 import { outstandingCents } from '@/lib/billing'
+import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -17,7 +18,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   const [{ data: profile }, authUserResult, { data: application }, { data: schoolYear }] =
     await Promise.all([
-      admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday').eq('id', id).single(),
+      admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday, bible_plan').eq('id', id).single(),
       admin.auth.admin.getUserById(id),
       admin.from('applications').select('phone, city').eq('applicant_id', id).maybeSingle(),
       supabase.from('school_years').select('id, name').eq('is_active', true).single(),
@@ -36,13 +37,23 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     schoolYear
       ? supabase
           .from('weeks')
-          .select('id, week_number, title, due_date, homework_items(id)')
+          .select('id, week_number, title, due_date, homework_items(id, bible_plan)')
           .eq('school_year_id', schoolYear.id)
           .order('week_number')
       : Promise.resolve({ data: [] as never[] }),
   ])
 
-  const allItemIds = (weeks ?? []).flatMap(w => (w.homework_items ?? []).map((i: { id: string }) => i.id))
+  // Scope every count to the plan this student was on for each week.
+  const { data: frozenRows } = await admin
+    .from('student_week_plans').select('week_id, plan').eq('student_id', id)
+  const studentPlan = asBiblePlan(profile.bible_plan)
+  const frozenPlans = frozenMap(frozenRows)
+  const visibleItemsForWeek = (week: { id: string; homework_items?: { id: string; bible_plan?: string | null }[] | null }) =>
+    (week.homework_items ?? []).filter(i =>
+      itemVisibleToPlan(i, planForWeek(week.id, studentPlan, frozenPlans))
+    )
+
+  const allItemIds = (weeks ?? []).flatMap(w => visibleItemsForWeek(w).map(i => i.id))
   const { data: submissions } = allItemIds.length
     ? await admin.from('submissions').select('homework_item_id').eq('student_id', id).in('homework_item_id', allItemIds)
     : { data: [] }
@@ -170,10 +181,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         <section>
           <h2 className="text-sm font-medium text-gray-700 mb-3">
             Homework — {schoolYear?.name ?? 'no active year'}
+            <span className="ml-2 font-normal text-xs text-gray-400">{BIBLE_PLAN_LABELS[studentPlan]}</span>
           </h2>
           <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-50">
             {(weeks ?? []).map(week => {
-              const itemIds = (week.homework_items ?? []).map((i: { id: string }) => i.id)
+              const itemIds = visibleItemsForWeek(week).map(i => i.id)
               const completed = itemIds.filter(itemId => completedIds.has(itemId)).length
               const total = itemIds.length
               const pastDue = new Date(week.due_date) < new Date()

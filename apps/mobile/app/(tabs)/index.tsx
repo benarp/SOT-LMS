@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { adjustOpenCount } from '../../lib/openAssignments'
 import { useTheme, type ThemeColors } from '../../lib/theme'
+import { asBiblePlan, frozenMap, visibleItems } from '../../lib/biblePlan'
 
 type HomeworkItem = {
   id: string
@@ -77,14 +78,18 @@ export default function ThisWeekScreen() {
     setDueDate(new Date(week.due_date))
     setWeekId(week.id)
 
-    const [{ data: hwItems }, { data: subs }, { data: ann }] = await Promise.all([
-      supabase.from('homework_items').select('id, type, title, description, external_url, sort_order').eq('week_id', week.id).order('sort_order'),
+    const [{ data: hwItems }, { data: subs }, { data: ann }, { data: profile }, { data: frozenRows }] = await Promise.all([
+      supabase.from('homework_items').select('id, type, title, description, external_url, sort_order, bible_plan').eq('week_id', week.id).order('sort_order'),
       supabase.from('submissions').select('homework_item_id').eq('student_id', user.id),
       supabase.from('announcements').select('id, title, body').lte('publish_at', new Date().toISOString()).is('target_group_id', null).order('publish_at', { ascending: false }).limit(3),
+      supabase.from('profiles').select('bible_plan').eq('id', user.id).single(),
+      supabase.from('student_week_plans').select('week_id, plan').eq('student_id', user.id).eq('week_id', week.id),
     ])
 
     const submittedIds = new Set((subs || []).map(s => s.homework_item_id))
-    setItems((hwItems || []).map(i => ({ ...i, completed: submittedIds.has(i.id) })))
+    // Only this student's reading plan (frozen to what it was for this week)
+    const mine = visibleItems(hwItems, asBiblePlan(profile?.bible_plan), frozenMap(frozenRows), week.id)
+    setItems(mine.map(i => ({ ...i, completed: submittedIds.has(i.id) })))
     setAnnouncements(ann || [])
     setLoading(false)
     setRefreshing(false)

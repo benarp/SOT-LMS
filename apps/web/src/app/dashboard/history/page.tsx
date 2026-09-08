@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { asBiblePlan, frozenMap, visibleItems } from '@/lib/biblePlan'
 
 export default async function HistoryPage() {
   const supabase = await createClient()
@@ -38,12 +39,16 @@ export default async function HistoryPage() {
     )
   }
 
-  // Get all homework items for these weeks
+  // Get all homework items for these weeks, narrowed to the student's reading
+  // plan as it stood in each week (past weeks may be frozen to an older plan).
   const weekIds = weeks.map(w => w.id)
-  const { data: items } = await supabase
-    .from('homework_items')
-    .select('id, week_id')
-    .in('week_id', weekIds)
+  const [{ data: allItems }, { data: profile }, { data: frozenRows }] = await Promise.all([
+    supabase.from('homework_items').select('id, week_id, bible_plan').in('week_id', weekIds),
+    supabase.from('profiles').select('bible_plan').eq('id', user.id).single(),
+    supabase.from('student_week_plans').select('week_id, plan').eq('student_id', user.id).in('week_id', weekIds),
+  ])
+
+  const items = visibleItems(allItems, asBiblePlan(profile?.bible_plan), frozenMap(frozenRows))
 
   // Get all submissions for this student
   const itemIds = (items || []).map(i => i.id)

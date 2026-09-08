@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useTheme, type ThemeColors } from '../../lib/theme'
+import { asBiblePlan, frozenMap, visibleItems } from '../../lib/biblePlan'
 
 type Week = {
   id: string
@@ -44,10 +45,15 @@ export default function HistoryScreen() {
 
     const weekIds = allWeeks.map(w => w.id)
 
-    const [{ data: items }, { data: subs }] = await Promise.all([
-      supabase.from('homework_items').select('id, week_id').in('week_id', weekIds),
+    const [{ data: allItems }, { data: subs }, { data: profile }, { data: frozenRows }] = await Promise.all([
+      supabase.from('homework_items').select('id, week_id, bible_plan').in('week_id', weekIds),
       supabase.from('submissions').select('homework_item_id').eq('student_id', user.id),
+      supabase.from('profiles').select('bible_plan').eq('id', user.id).single(),
+      supabase.from('student_week_plans').select('week_id, plan').eq('student_id', user.id).in('week_id', weekIds),
     ])
+
+    // Past weeks may be frozen to a plan the student is no longer on.
+    const items = visibleItems(allItems, asBiblePlan(profile?.bible_plan), frozenMap(frozenRows))
 
     const submittedIds = new Set((subs || []).map(s => s.homework_item_id))
     const itemsByWeek = new Map<string, string[]>()

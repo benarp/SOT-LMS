@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useTheme, type ThemeColors } from '../../lib/theme'
+import { asBiblePlan, frozenMap, visibleItems } from '../../lib/biblePlan'
 
 type Item = {
   id: string
@@ -38,10 +39,14 @@ export default function WeekDetailScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const [{ data: week }, { data: hwItems }] = await Promise.all([
+      const [{ data: week }, { data: allItems }, { data: profile }, { data: frozenRows }] = await Promise.all([
         supabase.from('weeks').select('id, week_number, title, due_date').eq('id', weekId).single(),
-        supabase.from('homework_items').select('id, type, title, description, sort_order').eq('week_id', weekId).order('sort_order'),
+        supabase.from('homework_items').select('id, type, title, description, sort_order, bible_plan').eq('week_id', weekId).order('sort_order'),
+        supabase.from('profiles').select('bible_plan').eq('id', user.id).single(),
+        supabase.from('student_week_plans').select('week_id, plan').eq('student_id', user.id).eq('week_id', weekId),
       ])
+
+      const hwItems = visibleItems(allItems, asBiblePlan(profile?.bible_plan), frozenMap(frozenRows), weekId)
 
       if (!week) { setLoading(false); return }
       setWeekTitle(week.title)

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 
 export default async function LeaderStudentsPage() {
   const supabase = await createClient()
@@ -23,7 +24,7 @@ export default async function LeaderStudentsPage() {
 
   const { data: students } = await supabase
     .from('profiles')
-    .select('id, full_name, email')
+    .select('id, full_name, email, bible_plan')
     .eq('group_id', profile.group_id)
     .eq('role', 'student')
     .order('full_name')
@@ -37,7 +38,7 @@ export default async function LeaderStudentsPage() {
   const weekIds = (weeks || []).map(w => w.id)
   const { data: allItems } = await supabase
     .from('homework_items')
-    .select('id, week_id')
+    .select('id, week_id, bible_plan')
     .in('week_id', weekIds.length > 0 ? weekIds : ['none'])
 
   const studentIds = (students || []).map(s => s.id)
@@ -46,15 +47,38 @@ export default async function LeaderStudentsPage() {
     .select('student_id, homework_item_id, is_late')
     .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
 
+  // Each student's totals are scoped to their own reading plan.
+  const { data: frozenRows } = await supabase
+    .from('student_week_plans')
+    .select('student_id, week_id, plan')
+    .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
+
+  const frozenByStudent = frozenMapByStudent(frozenRows)
+  const submissionSet = new Set((allSubmissions || []).map(s => `${s.student_id}:${s.homework_item_id}`))
+
   const studentStats = (students || []).map(student => {
-    const completed = (allSubmissions || []).filter(s => s.student_id === student.id).length
-    const late = (allSubmissions || []).filter(s => s.student_id === student.id && s.is_late).length
+    const frozen = frozenByStudent.get(student.id)
+    const currentPlan = asBiblePlan(student.bible_plan)
+    const itemsFor = (weekId: string) => {
+      const plan = planForWeek(weekId, currentPlan, frozen)
+      return (allItems || []).filter(i => i.week_id === weekId && itemVisibleToPlan(i, plan))
+    }
+
+    const visibleIds = new Set((weeks || []).flatMap(w => itemsFor(w.id).map(i => i.id)))
+    const own = (allSubmissions || []).filter(s => s.student_id === student.id && visibleIds.has(s.homework_item_id))
     const overdue = (weeks || []).reduce((count, week) => {
-      const weekItems = (allItems || []).filter(i => i.week_id === week.id)
-      const done = weekItems.filter(i => (allSubmissions || []).some(s => s.student_id === student.id && s.homework_item_id === i.id)).length
+      const weekItems = itemsFor(week.id)
+      const done = weekItems.filter(i => submissionSet.has(`${student.id}:${i.id}`)).length
       return count + (done < weekItems.length ? 1 : 0)
     }, 0)
-    return { ...student, completed, late, overdue, total: allItems?.length || 0 }
+
+    return {
+      ...student,
+      completed: own.length,
+      late: own.filter(s => s.is_late).length,
+      overdue,
+      total: visibleIds.size,
+    }
   })
 
   return (

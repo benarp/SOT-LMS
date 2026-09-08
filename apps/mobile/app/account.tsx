@@ -6,12 +6,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
 import { useTheme, type ThemeColors, type ThemePref } from '../lib/theme'
+import { BIBLE_PLAN_LABELS, DEFAULT_BIBLE_PLAN, asBiblePlan, type BiblePlan } from '../lib/biblePlan'
 
 const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
   { value: 'system', label: 'System' },
 ]
+
+const PLAN_OPTIONS: BiblePlan[] = ['shorter', 'whole']
 
 export default function AccountScreen() {
   const [loading, setLoading] = useState(true)
@@ -24,6 +27,8 @@ export default function AccountScreen() {
   const [savingName, setSavingName] = useState(false)
   const [savingEmail, setSavingEmail] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const [biblePlan, setBiblePlan] = useState<BiblePlan>(DEFAULT_BIBLE_PLAN)
+  const [savingPlan, setSavingPlan] = useState(false)
   const { colors, pref, setPref } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
@@ -33,13 +38,14 @@ export default function AccountScreen() {
       if (!user) return
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, email')
+        .select('full_name, email, bible_plan')
         .eq('id', user.id)
         .single()
       setName(profile?.full_name ?? '')
       setOriginalName(profile?.full_name ?? '')
       setEmail(user.email ?? profile?.email ?? '')
       setOriginalEmail(user.email ?? profile?.email ?? '')
+      setBiblePlan(asBiblePlan(profile?.bible_plan))
       setLoading(false)
     }
     load()
@@ -53,6 +59,21 @@ export default function AccountScreen() {
     if (error) { Alert.alert('Error', error.message); return }
     setOriginalName(name.trim())
     Alert.alert('Saved', 'Your name has been updated.')
+  }
+
+  async function selectPlan(plan: BiblePlan) {
+    if (plan === biblePlan || savingPlan) return
+    const previous = biblePlan
+    setSavingPlan(true)
+    setBiblePlan(plan)
+    const { error } = await supabase.rpc('update_own_bible_plan', { new_plan: plan })
+    setSavingPlan(false)
+    if (error) {
+      setBiblePlan(previous)
+      Alert.alert('Error', error.message)
+      return
+    }
+    Alert.alert('Saved', `Switched to the ${BIBLE_PLAN_LABELS[plan]}.`)
   }
 
   async function saveEmail() {
@@ -120,6 +141,31 @@ export default function AccountScreen() {
                   onPress={() => setPref(opt.value)}
                 >
                   <Text style={[styles.themePillText, active && styles.themePillTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
+
+        {/* Bible reading plan */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Bible Reading Plan</Text>
+          <Text style={styles.hint}>
+            Your weekly homework updates to match. Past weeks keep the plan you were on at the time.
+          </Text>
+          <View style={styles.themeRow}>
+            {PLAN_OPTIONS.map(plan => {
+              const active = biblePlan === plan
+              return (
+                <TouchableOpacity
+                  key={plan}
+                  style={[styles.themePill, active && styles.themePillActive]}
+                  onPress={() => selectPlan(plan)}
+                  disabled={savingPlan}
+                >
+                  <Text style={[styles.themePillText, active && styles.themePillTextActive]}>
+                    {BIBLE_PLAN_LABELS[plan]}
+                  </Text>
                 </TouchableOpacity>
               )
             })}

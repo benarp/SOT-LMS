@@ -3,8 +3,18 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from '@/components/ThemeToggle'
+import { BIBLE_PLAN_LABELS, DEFAULT_BIBLE_PLAN, asBiblePlan, type BiblePlan } from '@/lib/biblePlan'
 
 type Status = { kind: 'success' | 'error'; message: string } | null
+
+function StatusLine({ status }: { status: Status }) {
+  if (!status) return null
+  return (
+    <p className={`text-sm ${status.kind === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+      {status.message}
+    </p>
+  )
+}
 
 export default function AccountPage() {
   const supabase = createClient()
@@ -22,6 +32,9 @@ export default function AccountPage() {
   const [emailStatus, setEmailStatus] = useState<Status>(null)
   const [passwordStatus, setPasswordStatus] = useState<Status>(null)
   const [saving, setSaving] = useState<'name' | 'email' | 'password' | 'birthday' | null>(null)
+  const [biblePlan, setBiblePlan] = useState<BiblePlan>(DEFAULT_BIBLE_PLAN)
+  const [planStatus, setPlanStatus] = useState<Status>(null)
+  const [savingPlan, setSavingPlan] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -29,13 +42,14 @@ export default function AccountPage() {
       if (!user) return
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, birthday')
+        .select('full_name, birthday, bible_plan')
         .eq('id', user.id)
         .single()
       setName(profile?.full_name ?? '')
       setOriginalName(profile?.full_name ?? '')
       setBirthday(profile?.birthday ?? '')
       setOriginalBirthday(profile?.birthday ?? '')
+      setBiblePlan(asBiblePlan(profile?.bible_plan))
       setEmail(user.email ?? '')
       setOriginalEmail(user.email ?? '')
       setLoading(false)
@@ -64,6 +78,22 @@ export default function AccountPage() {
     if (error) { setBirthdayStatus({ kind: 'error', message: error.message }); return }
     setOriginalBirthday(birthday)
     setBirthdayStatus({ kind: 'success', message: 'Birthday saved.' })
+  }
+
+  async function selectPlan(plan: BiblePlan) {
+    if (plan === biblePlan || savingPlan) return
+    const previous = biblePlan
+    setPlanStatus(null)
+    setSavingPlan(true)
+    setBiblePlan(plan)
+    const { error } = await supabase.rpc('update_own_bible_plan', { new_plan: plan })
+    setSavingPlan(false)
+    if (error) {
+      setBiblePlan(previous)
+      setPlanStatus({ kind: 'error', message: error.message })
+      return
+    }
+    setPlanStatus({ kind: 'success', message: `Switched to the ${BIBLE_PLAN_LABELS[plan]}.` })
   }
 
   async function saveEmail(e: React.FormEvent) {
@@ -107,15 +137,6 @@ export default function AccountPage() {
   const inputClass = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent'
   const buttonClass = 'bg-gray-900 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50'
 
-  function StatusLine({ status }: { status: Status }) {
-    if (!status) return null
-    return (
-      <p className={`text-sm ${status.kind === 'error' ? 'text-red-600' : 'text-green-600'}`}>
-        {status.message}
-      </p>
-    )
-  }
-
   return (
     <div className="max-w-lg">
       <h1 className="text-2xl font-medium text-gray-900 mb-1">Account</h1>
@@ -125,6 +146,36 @@ export default function AccountPage() {
         <p className="text-sm font-medium text-gray-700 mb-1">Appearance</p>
         <p className="text-xs text-gray-400 mb-4">Choose a theme for this device. &ldquo;System&rdquo; follows your device settings.</p>
         <ThemeToggle />
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-5">
+        <p className="text-sm font-medium text-gray-700 mb-1">Bible Reading Plan</p>
+        <p className="text-xs text-gray-400 mb-4">
+          Choose how much you&apos;re reading this year. Your weekly homework updates to match.
+          Past weeks keep the plan you were on at the time.
+        </p>
+        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+          {(['shorter', 'whole'] as const).map(plan => {
+            const active = biblePlan === plan
+            return (
+              <button
+                key={plan}
+                type="button"
+                onClick={() => selectPlan(plan)}
+                disabled={savingPlan}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50 ${
+                  active
+                    ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+                aria-pressed={active}
+              >
+                {BIBLE_PLAN_LABELS[plan]}
+              </button>
+            )
+          })}
+        </div>
+        <div className="mt-3"><StatusLine status={planStatus} /></div>
       </div>
 
       <form onSubmit={saveName} className="bg-white border border-gray-200 rounded-xl p-6 mb-5 space-y-4">

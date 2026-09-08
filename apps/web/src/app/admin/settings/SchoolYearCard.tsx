@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { setActiveSchoolYear, updateApplicationWindow, completeSchoolYear, reopenSchoolYear } from '@/app/actions/schoolYears'
+import { setActiveSchoolYear, updateApplicationWindow, completeSchoolYear, reopenSchoolYear, previewCompleteSchoolYear } from '@/app/actions/schoolYears'
 import { useRouter } from 'next/navigation'
 
 type SchoolYear = {
@@ -50,11 +50,31 @@ export default function SchoolYearCard({ year }: { year: SchoolYear }) {
   }
 
   async function handleComplete() {
-    if (!confirm(
-      `Complete ${year.name}?\n\nAll current students become alumni of this year — they keep their login and can view their past reflections, but stop receiving weekly emails and won't appear in next year's cohort.\n\nReturning students who'll lead groups can be promoted afterward from their profile.`
-    )) return
+    // Show exactly who this affects before doing it — graduating the wrong
+    // cohort locks real students out of the dashboard.
     setCompleting(true)
     setError('')
+    const preview = await previewCompleteSchoolYear(year.id)
+    setCompleting(false)
+    if (preview.error) { setError(preview.error); return }
+
+    const names = preview.names ?? []
+    if (names.length === 0) {
+      if (!confirm(
+        `Complete ${year.name}?\n\nNo students are associated with this year, so nobody will be moved to alumni. The year will just be marked complete.`
+      )) return
+    } else {
+      const shown = names.slice(0, 15).map(n => `  • ${n}`).join('\n')
+      const more = names.length > 15 ? `\n  …and ${names.length - 15} more` : ''
+      if (!confirm(
+        `Complete ${year.name}?\n\n` +
+        `This moves ${names.length} student${names.length === 1 ? '' : 's'} to alumni:\n\n${shown}${more}\n\n` +
+        `They keep their login and can view past reflections, but lose dashboard access, stop receiving weekly emails, and are removed from their group.\n\n` +
+        `If anyone above shouldn't be graduating, cancel and check which year is active first.`
+      )) return
+    }
+
+    setCompleting(true)
     const result = await completeSchoolYear(year.id)
     setCompleting(false)
     if (result.error) { setError(result.error); return }

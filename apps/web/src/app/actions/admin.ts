@@ -49,6 +49,11 @@ export async function addHomeworkItem(formData: FormData): Promise<{ error?: str
   const content = formData.get('content') as string
   const sortOrder = parseInt(formData.get('sortOrder') as string)
 
+  // Only bible_reading items can be scoped to a reading plan; 'both' (or any
+  // other type) stores null, meaning every student sees it.
+  const planTag = formData.get('biblePlan') as string | null
+  const biblePlan = type === 'bible_reading' && (planTag === 'shorter' || planTag === 'whole') ? planTag : null
+
   const { error } = await supabase.from('homework_items').insert({
     week_id: weekId,
     type,
@@ -58,6 +63,7 @@ export async function addHomeworkItem(formData: FormData): Promise<{ error?: str
     content: content || null,
     sort_order: sortOrder,
     show_attribution: formData.get('showAttribution') === 'on',
+    bible_plan: biblePlan,
   })
 
   if (error) return { error: error.message }
@@ -86,6 +92,11 @@ export async function updateHomeworkItem(formData: FormData): Promise<{ error?: 
   // the flag when other item types are edited
   if (formData.get('hasAttributionField')) {
     updates.show_attribution = formData.get('showAttribution') === 'on'
+  }
+  // Same guard for the reading-plan selector, which only bible_reading renders
+  if (formData.get('hasBiblePlanField')) {
+    const planTag = formData.get('biblePlan') as string | null
+    updates.bible_plan = planTag === 'shorter' || planTag === 'whole' ? planTag : null
   }
 
   const { error } = await supabase.from('homework_items').update(updates).eq('id', itemId)

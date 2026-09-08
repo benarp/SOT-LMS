@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 
 export default async function LeaderOverviewPage() {
   const supabase = await createClient()
@@ -30,7 +31,7 @@ export default async function LeaderOverviewPage() {
 
   const { data: students } = await supabase
     .from('profiles')
-    .select('id, full_name, email')
+    .select('id, full_name, email, bible_plan')
     .eq('group_id', profile.group_id)
     .eq('role', 'student')
     .order('full_name')
@@ -47,7 +48,7 @@ export default async function LeaderOverviewPage() {
 
   const { data: allItems } = await supabase
     .from('homework_items')
-    .select('id, week_id')
+    .select('id, week_id, bible_plan')
     .in('week_id', weekIds.length > 0 ? weekIds : ['none'])
 
   const { data: allSubmissions } = await supabase
@@ -55,24 +56,41 @@ export default async function LeaderOverviewPage() {
     .select('student_id, homework_item_id, is_late')
     .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
 
+  // Reading plans differ per student, so every denominator below is a per-student
+  // sum of the items *that student* can see — not one shared item count.
+  const { data: frozenRows } = await supabase
+    .from('student_week_plans')
+    .select('student_id, week_id, plan')
+    .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
+
+  const frozenByStudent = frozenMapByStudent(frozenRows)
   const submissionSet = new Set((allSubmissions || []).map(s => `${s.student_id}:${s.homework_item_id}`))
+
+  function itemsFor(studentId: string, currentPlan: string | null | undefined, weekId: string) {
+    const plan = planForWeek(weekId, asBiblePlan(currentPlan), frozenByStudent.get(studentId))
+    return (allItems || []).filter(i => i.week_id === weekId && itemVisibleToPlan(i, plan))
+  }
 
   // Per-week stats for this group
   const weekStats = (weeks || []).map(week => {
-    const weekItems = (allItems || []).filter(i => i.week_id === week.id)
-    const totalPossible = weekItems.length * (students || []).length
-    const submitted = (allSubmissions || []).filter(s => weekItems.some(i => i.id === s.homework_item_id)).length
+    let totalPossible = 0
+    let submitted = 0
+    for (const student of students || []) {
+      const visible = itemsFor(student.id, student.bible_plan, week.id)
+      totalPossible += visible.length
+      submitted += visible.filter(i => submissionSet.has(`${student.id}:${i.id}`)).length
+    }
     const completionRate = totalPossible > 0 ? Math.round((submitted / totalPossible) * 100) : 0
     return { ...week, completionRate }
   })
 
   // Students with overdue work
-  const overdueStudents = (students || []).filter(student => {
-    return (weeks || []).some(week => {
-      const weekItems = (allItems || []).filter(i => i.week_id === week.id)
-      return weekItems.some(i => !submissionSet.has(`${student.id}:${i.id}`))
-    })
-  })
+  const overdueStudents = (students || []).filter(student =>
+    (weeks || []).some(week =>
+      itemsFor(student.id, student.bible_plan, week.id)
+        .some(i => !submissionSet.has(`${student.id}:${i.id}`))
+    )
+  )
 
   return (
     <div className="max-w-3xl">

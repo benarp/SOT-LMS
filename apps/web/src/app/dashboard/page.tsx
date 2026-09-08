@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import HomeworkFeed from '@/components/HomeworkFeed'
+import { asBiblePlan, frozenMap, visibleItems } from '@/lib/biblePlan'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -42,12 +43,23 @@ export default async function DashboardPage() {
     )
   }
 
-  // Get homework items for this week
-  const { data: items } = await supabase
-    .from('homework_items')
-    .select('id, type, title, description, external_url, content, sort_order, show_attribution')
-    .eq('week_id', currentWeek.id)
-    .order('sort_order', { ascending: true })
+  // Get homework items for this week, then narrow to the student's reading plan
+  const [{ data: allItems }, { data: profile }, { data: frozenRows }] = await Promise.all([
+    supabase
+      .from('homework_items')
+      .select('id, type, title, description, external_url, content, sort_order, show_attribution, bible_plan')
+      .eq('week_id', currentWeek.id)
+      .order('sort_order', { ascending: true }),
+    supabase.from('profiles').select('bible_plan').eq('id', user.id).single(),
+    supabase.from('student_week_plans').select('week_id, plan').eq('student_id', user.id).eq('week_id', currentWeek.id),
+  ])
+
+  const items = visibleItems(
+    allItems,
+    asBiblePlan(profile?.bible_plan),
+    frozenMap(frozenRows),
+    currentWeek.id
+  )
 
   // Get student's submissions for this week's items
   const itemIds = (items || []).map(i => i.id)

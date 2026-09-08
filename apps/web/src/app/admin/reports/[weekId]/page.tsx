@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -25,18 +26,30 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
   const [{ data: items }, { data: students }] = await Promise.all([
     supabase
       .from('homework_items')
-      .select('id, type, title, sort_order')
+      .select('id, type, title, sort_order, bible_plan')
       .eq('week_id', weekId)
       .order('sort_order', { ascending: true }),
     supabase
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, full_name, email, bible_plan')
       .eq('role', 'student')
       .order('full_name', { ascending: true }),
   ])
 
   const itemIds = (items || []).map(i => i.id)
   const studentIds = (students || []).map(s => s.id)
+
+  // Admins see every item as a column, but a student on the other reading plan
+  // was never assigned some of them — those cells render "n/a", not "Not done".
+  const { data: frozenRows } = await supabase
+    .from('student_week_plans')
+    .select('student_id, week_id, plan')
+    .eq('week_id', weekId)
+    .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
+
+  const frozenByStudent = frozenMapByStudent(frozenRows)
+  const planOf = (student: { id: string; bible_plan?: string | null }) =>
+    planForWeek(weekId, asBiblePlan(student.bible_plan), frozenByStudent.get(student.id))
 
   const { data: submissions } = await supabase
     .from('submissions')
@@ -94,9 +107,17 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
               <tr key={student.id} className={i < (students || []).length - 1 ? 'border-b border-gray-50' : ''}>
                 <td className="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white whitespace-nowrap">
                   {student.full_name || student.email}
+                  <span className="block text-[10px] font-normal text-gray-400">{BIBLE_PLAN_LABELS[planOf(student)]}</span>
                 </td>
                 {(items || []).map(item => {
                   const submission = submissionMap.get(`${student.id}:${item.id}`)
+                  if (!itemVisibleToPlan(item, planOf(student))) {
+                    return (
+                      <td key={item.id} className="px-4 py-3 align-top bg-gray-50">
+                        <span className="text-xs text-gray-300">n/a — other plan</span>
+                      </td>
+                    )
+                  }
                   return (
                     <td key={item.id} className="px-4 py-3 align-top">
                       {item.type === 'reflection' ? (

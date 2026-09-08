@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
+import { asBiblePlan, itemVisibleToPlan } from '@/lib/biblePlan'
 
 function escapeHtml(value: string): string {
   return value
@@ -153,7 +154,7 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
   const [{ data: items }, { data: announcements }, studentsResult] = await Promise.all([
     supabase
       .from('homework_items')
-      .select('id, type, title, description, external_url')
+      .select('id, type, title, description, external_url, bible_plan')
       .eq('week_id', week.id)
       .order('sort_order', { ascending: true }),
     supabase
@@ -165,14 +166,15 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
       .limit(5),
     supabase
       .from('profiles')
-      .select('email, full_name, email_opt_out, unsubscribe_token')
+      .select('email, full_name, email_opt_out, unsubscribe_token, bible_plan')
       .eq('role', 'student')
       .eq('email_opt_out', false),
   ])
 
   // Fall back to the pre-migration column set if unsubscribe columns don't exist yet
-  let students: { email: string | null; full_name: string | null; unsubscribe_token?: string }[] | null =
-    studentsResult.data
+  let students:
+    | { email: string | null; full_name: string | null; unsubscribe_token?: string; bible_plan?: string | null }[]
+    | null = studentsResult.data
   if (studentsResult.error) {
     const fallback = await supabase.from('profiles').select('email, full_name').eq('role', 'student')
     students = fallback.data
@@ -194,7 +196,9 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
       subject,
       html: buildEmailHtml({
         week,
-        items: items || [],
+        // The digest covers an upcoming week, so each student's *current* plan
+        // applies — no frozen history to consult.
+        items: (items || []).filter(i => itemVisibleToPlan(i, asBiblePlan(s.bible_plan))),
         announcements: announcements || [],
         schoolYear,
         unsubscribeUrl: s.unsubscribe_token ? `${siteUrl}/unsubscribe/${s.unsubscribe_token}` : undefined,

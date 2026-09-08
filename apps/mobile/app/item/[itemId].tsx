@@ -10,6 +10,7 @@ import { WebView } from 'react-native-webview'
 import { supabase } from '../../lib/supabase'
 import { adjustOpenCount } from '../../lib/openAssignments'
 import { useTheme, type ThemeColors } from '../../lib/theme'
+import { asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '../../lib/biblePlan'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const VIDEO_HEIGHT = Math.round((SCREEN_WIDTH - 32) * 9 / 16)
@@ -70,11 +71,24 @@ export default function ItemDetailScreen() {
 
       const { data: itemData } = await supabase
         .from('homework_items')
-        .select('id, type, title, description, content, external_url, week_id, show_attribution')
+        .select('id, type, title, description, content, external_url, week_id, show_attribution, bible_plan')
         .eq('id', itemId)
         .single()
 
       if (!itemData) { setLoading(false); return }
+
+      // Items are fetched by id here, so a deep link could otherwise open a
+      // reading belonging to the plan this student isn't on.
+      const [{ data: profile }, { data: frozenRows }] = await Promise.all([
+        supabase.from('profiles').select('bible_plan').eq('id', user.id).single(),
+        supabase.from('student_week_plans').select('week_id, plan').eq('student_id', user.id).eq('week_id', itemData.week_id),
+      ])
+      const assignedPlan = planForWeek(
+        itemData.week_id,
+        asBiblePlan(profile?.bible_plan),
+        frozenMap(frozenRows)
+      )
+      if (!itemVisibleToPlan(itemData, assignedPlan)) { setLoading(false); return }
 
       const { data: week } = await supabase
         .from('weeks')

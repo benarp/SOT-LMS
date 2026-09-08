@@ -75,6 +75,78 @@ export async function setActiveSchoolYear(schoolYearId: string): Promise<{ error
   return { enrolled }
 }
 
+/**
+ * Students actually associated with a school year.
+ *
+ * `profiles` has no direct school_year column, so membership is inferred from
+ * the year-scoped records a student accumulates: their group, billing account,
+ * application, or any submitted homework. Completing a year must only graduate
+ * *that* year's cohort — graduating every `role = 'student'` row (the original
+ * behaviour) swept up a freshly-imported cohort that hadn't started yet.
+ */
+async function cohortStudentIds(
+  admin: ReturnType<typeof createAdminClient>,
+  schoolYearId: string
+): Promise<Set<string>> {
+  const ids = new Set<string>()
+
+  const [{ data: groups }, { data: billing }, { data: apps }, { data: weeks }] = await Promise.all([
+    admin.from('groups').select('id').eq('school_year_id', schoolYearId),
+    admin.from('billing_accounts').select('student_id').eq('school_year_id', schoolYearId),
+    admin.from('applications').select('applicant_id').eq('school_year_id', schoolYearId),
+    admin.from('weeks').select('id').eq('school_year_id', schoolYearId),
+  ])
+
+  for (const b of billing ?? []) if (b.student_id) ids.add(b.student_id)
+  for (const a of apps ?? []) if (a.applicant_id) ids.add(a.applicant_id)
+
+  const groupIds = (groups ?? []).map(g => g.id)
+  if (groupIds.length > 0) {
+    const { data: grouped } = await admin.from('profiles').select('id').in('group_id', groupIds)
+    for (const p of grouped ?? []) ids.add(p.id)
+  }
+
+  // Anyone who submitted homework belonging to this year's weeks
+  const weekIds = (weeks ?? []).map(w => w.id)
+  if (weekIds.length > 0) {
+    const { data: items } = await admin.from('homework_items').select('id').in('week_id', weekIds)
+    const itemIds = (items ?? []).map(i => i.id)
+    if (itemIds.length > 0) {
+      const { data: subs } = await admin.from('submissions').select('student_id').in('homework_item_id', itemIds)
+      for (const s of subs ?? []) if (s.student_id) ids.add(s.student_id)
+    }
+  }
+
+  return ids
+}
+
+/**
+ * Who "Complete this year" would graduate, so the admin can see the list
+ * before committing to it. Read-only.
+ */
+export async function previewCompleteSchoolYear(
+  schoolYearId: string
+): Promise<{ error?: string; names?: string[]; total?: number }> {
+  const { error: authError } = await assertAdmin()
+  if (authError) return { error: authError }
+
+  const admin = createAdminClient()
+  const cohort = await cohortStudentIds(admin, schoolYearId)
+  if (cohort.size === 0) return { names: [], total: 0 }
+
+  const { data: students } = await admin
+    .from('profiles')
+    .select('full_name, email')
+    .eq('role', 'student')
+    .in('id', Array.from(cohort))
+    .order('full_name')
+
+  return {
+    names: (students ?? []).map(s => s.full_name || s.email || 'Unnamed'),
+    total: (students ?? []).length,
+  }
+}
+
 export async function completeSchoolYear(schoolYearId: string): Promise<{ error?: string; graduated?: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -92,15 +164,22 @@ export async function completeSchoolYear(schoolYearId: string): Promise<{ error?
     .single()
   if (yearError) return { error: yearError.message }
 
-  // Graduate the cohort: every current student becomes an alumnus of this
-  // year. Returning students who'll lead groups next year get promoted
-  // afterward from their profile page.
-  const { data: graduated, error: gradError } = await admin
-    .from('profiles')
-    .update({ role: 'alumni', alumni_year_id: schoolYearId, group_id: null })
-    .eq('role', 'student')
-    .select('id')
-  if (gradError) return { error: gradError.message }
+  // Graduate only THIS year's cohort. Scoping matters: an unscoped update
+  // graduates students who were imported for a future year and have never
+  // attended, locking them out of the dashboard.
+  const cohort = await cohortStudentIds(admin, schoolYearId)
+
+  let graduated: { id: string }[] = []
+  if (cohort.size > 0) {
+    const { data, error: gradError } = await admin
+      .from('profiles')
+      .update({ role: 'alumni', alumni_year_id: schoolYearId, group_id: null })
+      .eq('role', 'student')
+      .in('id', Array.from(cohort))
+      .select('id')
+    if (gradError) return { error: gradError.message }
+    graduated = data ?? []
+  }
 
   await logAudit({
     actor_id: user.id,

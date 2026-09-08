@@ -12,6 +12,7 @@ type Item = {
   external_url: string | null
   content: string | null
   show_attribution?: boolean
+  bible_plan?: string | null
 }
 
 export default function EditItemButton({ item }: { item: Item }) {
@@ -79,6 +80,22 @@ export default function EditItemButton({ item }: { item: Item }) {
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
         />
       </div>
+
+      {item.type === 'bible_reading' && (
+        <div>
+          <input type="hidden" name="hasBiblePlanField" value="1" />
+          <label className="block text-xs font-medium text-gray-500 mb-1">Reading plan</label>
+          <select
+            name="biblePlan"
+            defaultValue={item.bible_plan ?? 'both'}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+          >
+            <option value="both">Both plans</option>
+            <option value="shorter">Shorter Plan only</option>
+            <option value="whole">Whole Bible Plan only</option>
+          </select>
+        </div>
+      )}
 
       {showContent && (
         <div>

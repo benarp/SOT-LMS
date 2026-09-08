@@ -5,6 +5,7 @@ import AddGroupForm from '@/components/admin/AddGroupForm'
 import GroupAssignSelect from '@/components/admin/GroupAssignSelect'
 import UsersTable, { type UserRow } from './UsersTable'
 import { BILLING_STATUS_LABELS } from '@/lib/billing'
+import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 
 function splitName(full: string | null): { firstName: string; lastName: string } {
   if (!full) return { firstName: '', lastName: '' }
@@ -31,7 +32,7 @@ export default async function UsersPage() {
     { data: allYears },
     currentWeekResult,
   ] = await Promise.all([
-    admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday').order('full_name'),
+    admin.from('profiles').select('id, full_name, email, role, group_id, alumni_year_id, birthday, bible_plan').order('full_name'),
     admin.from('applications').select('applicant_id, phone, city'),
     supabase.from('groups').select('id, name').eq('school_year_id', schoolYear?.id ?? '').order('name'),
     admin.from('school_years').select('id, name'),
@@ -72,27 +73,34 @@ export default async function UsersPage() {
     const isPastDue = new Date(currentWeek.due_date) < new Date()
     const { data: items } = await supabase
       .from('homework_items')
-      .select('id')
+      .select('id, bible_plan')
       .eq('week_id', currentWeek.id)
 
     const itemIds = (items ?? []).map(i => i.id)
-    const totalItems = itemIds.length
 
-    if (totalItems > 0) {
-      const { data: submissions } = await supabase
-        .from('submissions')
-        .select('student_id')
-        .in('homework_item_id', itemIds)
+    if (itemIds.length > 0) {
+      const studentIds = (profiles ?? []).filter(p => p.role === 'student').map(p => p.id)
+      const [{ data: submissions }, { data: frozenRows }] = await Promise.all([
+        supabase.from('submissions').select('student_id, homework_item_id').in('homework_item_id', itemIds),
+        supabase
+          .from('student_week_plans')
+          .select('student_id, week_id, plan')
+          .eq('week_id', currentWeek.id)
+          .in('student_id', studentIds.length > 0 ? studentIds : ['none']),
+      ])
 
-      const submissionsByStudent: Record<string, number> = {}
-      for (const sub of submissions ?? []) {
-        submissionsByStudent[sub.student_id] = (submissionsByStudent[sub.student_id] ?? 0) + 1
-      }
+      const frozenByStudent = frozenMapByStudent(frozenRows)
+      const submissionSet = new Set((submissions ?? []).map(s => `${s.student_id}:${s.homework_item_id}`))
 
+      // "Current" means done with everything on *their* reading plan, so the
+      // denominator differs per student.
       for (const profile of profiles ?? []) {
         if (profile.role !== 'student') continue
-        const completed = submissionsByStudent[profile.id] ?? 0
-        if (completed >= totalItems) {
+        const plan = planForWeek(currentWeek.id, asBiblePlan(profile.bible_plan), frozenByStudent.get(profile.id))
+        const visible = (items ?? []).filter(i => itemVisibleToPlan(i, plan))
+        if (visible.length === 0) continue
+        const completed = visible.filter(i => submissionSet.has(`${profile.id}:${i.id}`)).length
+        if (completed >= visible.length) {
           homeworkStatusMap[profile.id] = 'current'
         } else if (isPastDue) {
           homeworkStatusMap[profile.id] = 'late'
