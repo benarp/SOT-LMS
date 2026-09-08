@@ -5,11 +5,18 @@
 // (the Whole Bible plan).
 //
 //   Shorter -> one item per day, five checkboxes, bible_plan='shorter'
-//   Whole   -> a single item for the week, bible_plan='whole'
+//   Whole   -> one item per verified chunk, bible_plan='whole'
 //
-// The Whole plan is one item because the manual states the entire-Bible
-// reading is deliberately undivided ("you will divide it as you desire").
-// Inventing day boundaries for it across 18 weeks isn't something to guess at.
+// The Whole plan is chunked rather than kept as one item because BibleGateway
+// silently truncates a large request: week 1's single link asked for "Genesis
+// 1:1-11:26, Job 1, John 1-2" and rendered only Genesis 1:1-10:15, so students
+// never saw most of their reading. scripts/chunk-whole-plan.js splits each week
+// into pieces the site will actually display in full and checks every one of
+// them against the live site; this loader consumes that verified output.
+//
+// Chunking is a display concern, not a schedule: the manual still leaves the
+// week's whole-Bible reading undivided ("you will divide it as you desire"),
+// and the chunks are ordered pieces of that one reading, not day assignments.
 //
 // Each item carries a BibleGateway link in external_url.
 //
@@ -19,31 +26,42 @@
 //   node scripts/load-reading-plan.js "/path/to/plan.pdf" --dry-run
 //   node scripts/load-reading-plan.js "/path/to/plan.pdf"
 //   node scripts/load-reading-plan.js "/path/to/plan.pdf" --weeks 1-6
+//
+// Requires scripts/whole-plan-chunks.json (regenerate with chunk-whole-plan.js).
 
 const fs = require('fs')
 const path = require('path')
 const { createClient } = require('@supabase/supabase-js')
-const { parse, splitReferences, biblegatewayUrl } = require('./parse-reading-plan.js')
+const { parse, splitReferences } = require('./parse-reading-plan.js')
+const { applyOverrides } = require('./plan-overrides.js')
 
 const SCHOOL_YEAR = '2026-2027'
+const CHUNKS_PATH = path.join(__dirname, 'whole-plan-chunks.json')
 
 /**
- * Corrections applied on top of what the PDF literally says.
+ * Verified whole-plan chunks, keyed by week number.
  *
- * Kept as explicit overrides rather than folded into the parser so they stay
- * visible, and so re-running against a corrected PDF is a no-op rather than
- * silently re-applying a fix that's no longer needed.
- *
- * week 3 whole: the PDF reads "Job 18-42, John 3-4", repeating week 2's New
- * Testament reading. Every other week's Entire Bible line matches that week's
- * survey NT reading (17/18), and John 5-6 appears in no Entire Bible line at
- * all — so a whole-Bible reader would read John 3-4 twice and skip John 5-6.
- * Confirmed with Ben 2026-09-08; also flagged in docs/reading-plan-part-one.md
- * for the next revision of the PDF.
+ * Generated offline so a load is deterministic and needs no network. A missing
+ * or unverified file is fatal rather than a silent fallback to one big link —
+ * that link is the bug this replaced.
  */
-const OVERRIDES = {
-  3: { whole: 'Job 18-42, John 5-6' },
+function loadChunks() {
+  if (!fs.existsSync(CHUNKS_PATH)) {
+    console.error(`Missing ${path.basename(CHUNKS_PATH)} — run:`)
+    console.error(`  node scripts/chunk-whole-plan.js "<plan.pdf>"`)
+    process.exit(1)
+  }
+  const data = JSON.parse(fs.readFileSync(CHUNKS_PATH, 'utf8'))
+  const bad = Object.entries(data.weeks).flatMap(([week, cs]) =>
+    cs.filter(c => !c.verified).map(c => `week ${week}: ${c.reference}`))
+  if (bad.length) {
+    console.error(`${path.basename(CHUNKS_PATH)} has ${bad.length} unverified chunk(s); refusing to load:`)
+    for (const b of bad) console.error(`  ${b}`)
+    process.exit(1)
+  }
+  return data
 }
+
 
 function loadEnvLocal() {
   const env = {}
@@ -59,7 +77,7 @@ function loadEnvLocal() {
   return env
 }
 
-function desiredItems(week) {
+function desiredItems(week, chunks) {
   const items = []
   for (const day of week.shorter) {
     items.push({
@@ -72,17 +90,22 @@ function desiredItems(week) {
       sort_order: items.length,
     })
   }
-  if (week.whole) {
+  // One item per verified chunk. Numbered so the ordering is legible to a
+  // student working through them, and so a week's parts stay distinguishable
+  // in the admin list.
+  chunks.forEach((chunk, i) => {
     items.push({
       type: 'bible_reading',
-      title: 'Entire Bible Plan',
-      description: 'Read at your own pace across the week.',
-      content: splitReferences(week.whole.reference).join('\n'),
-      external_url: week.whole.url,
+      title: chunks.length === 1
+        ? 'Entire Bible Plan'
+        : `Entire Bible Plan (${i + 1} of ${chunks.length})`,
+      description: i === 0 ? 'Read at your own pace across the week.' : null,
+      content: chunk.reference,
+      external_url: chunk.url,
       bible_plan: 'whole',
       sort_order: items.length,
     })
-  }
+  })
   return items
 }
 
@@ -116,17 +139,15 @@ async function main() {
     process.exit(1)
   }
 
-  const parsed = parse(pdfPath)
-    .filter(w => !weekFilter || weekFilter(w.week))
-    .map(w => {
-      const override = OVERRIDES[w.week]
-      if (!override?.whole) return w
-      if (w.whole && w.whole.reference === override.whole) return w // PDF already fixed
+  const chunkData = loadChunks()
+  const parsed = applyOverrides(
+    parse(pdfPath).filter(w => !weekFilter || weekFilter(w.week)),
+    (w, override) => {
       console.log(`  ↳ week ${w.week}: overriding Entire Bible Plan`)
       console.log(`      PDF says : ${w.whole ? w.whole.reference : '(none)'}`)
       console.log(`      using    : ${override.whole}`)
-      return { ...w, whole: { reference: override.whole, url: biblegatewayUrl(override.whole) } }
-    })
+    },
+  )
   const env = loadEnvLocal()
   const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -153,7 +174,13 @@ async function main() {
 
     const existingReadings = (allItems ?? []).filter(i => i.type === 'bible_reading')
     const otherItems = (allItems ?? []).filter(i => i.type !== 'bible_reading')
-    const desired = desiredItems(pw)
+    const chunks = chunkData.weeks[pw.week] ?? []
+    if (pw.whole && chunks.length === 0) {
+      console.error(`Week ${pw.week}: no chunks in ${path.basename(CHUNKS_PATH)} — regenerate it; skipped`)
+      skipped++
+      continue
+    }
+    const desired = desiredItems(pw, chunks)
 
     const flag = pw.ok ? '' : `  ⚠ ${pw.dayCount} day(s) in source`
     console.log(`Week ${pw.week} — due ${String(week.due_date).slice(0, 10)} — ${desired.length} item(s)${flag}`)

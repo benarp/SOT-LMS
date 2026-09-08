@@ -1,0 +1,767 @@
+{
+  "version": "NIV",
+  "maxChapters": 6,
+  "weeks": {
+    "1": [
+      {
+        "reference": "Genesis 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 7-10",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+7-10&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 11:1-26",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+11%3A1-26&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Job 1",
+        "url": "https://www.biblegateway.com/passage/?search=Job+1&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 1-2",
+        "url": "https://www.biblegateway.com/passage/?search=John+1-2&version=NIV",
+        "verified": true
+      }
+    ],
+    "2": [
+      {
+        "reference": "Job 2-7",
+        "url": "https://www.biblegateway.com/passage/?search=Job+2-7&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Job 8-13",
+        "url": "https://www.biblegateway.com/passage/?search=Job+8-13&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Job 14-17",
+        "url": "https://www.biblegateway.com/passage/?search=Job+14-17&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 3-4",
+        "url": "https://www.biblegateway.com/passage/?search=John+3-4&version=NIV",
+        "verified": true
+      }
+    ],
+    "3": [
+      {
+        "reference": "Job 18-23",
+        "url": "https://www.biblegateway.com/passage/?search=Job+18-23&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Job 24-29",
+        "url": "https://www.biblegateway.com/passage/?search=Job+24-29&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Job 30-35",
+        "url": "https://www.biblegateway.com/passage/?search=Job+30-35&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Job 36-41",
+        "url": "https://www.biblegateway.com/passage/?search=Job+36-41&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Job 42",
+        "url": "https://www.biblegateway.com/passage/?search=Job+42&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 5-6",
+        "url": "https://www.biblegateway.com/passage/?search=John+5-6&version=NIV",
+        "verified": true
+      }
+    ],
+    "4": [
+      {
+        "reference": "Genesis 11:27-31",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+11%3A27-31&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 12-17",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+12-17&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 18-23",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+18-23&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 24-29",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+24-29&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 30-35",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+30-35&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 36",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+36&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 7-8",
+        "url": "https://www.biblegateway.com/passage/?search=John+7-8&version=NIV",
+        "verified": true
+      }
+    ],
+    "5": [
+      {
+        "reference": "Genesis 37-42",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+37-42&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 43-48",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+43-48&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Genesis 49-50",
+        "url": "https://www.biblegateway.com/passage/?search=Genesis+49-50&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Exodus 1-4",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+1-4&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 9-10",
+        "url": "https://www.biblegateway.com/passage/?search=John+9-10&version=NIV",
+        "verified": true
+      }
+    ],
+    "6": [
+      {
+        "reference": "Exodus 5-10",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+5-10&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Exodus 11-16",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+11-16&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Exodus 17-22",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+17-22&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Exodus 23-28",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+23-28&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Exodus 29",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+29&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 11-12",
+        "url": "https://www.biblegateway.com/passage/?search=John+11-12&version=NIV",
+        "verified": true
+      }
+    ],
+    "7": [
+      {
+        "reference": "Exodus 30-35",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+30-35&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Exodus 36-40",
+        "url": "https://www.biblegateway.com/passage/?search=Exodus+36-40&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 7-9",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+7-9&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Leviticus 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Leviticus+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Leviticus 7-12",
+        "url": "https://www.biblegateway.com/passage/?search=Leviticus+7-12&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Leviticus 13-18",
+        "url": "https://www.biblegateway.com/passage/?search=Leviticus+13-18&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Leviticus 19",
+        "url": "https://www.biblegateway.com/passage/?search=Leviticus+19&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 13-14",
+        "url": "https://www.biblegateway.com/passage/?search=John+13-14&version=NIV",
+        "verified": true
+      }
+    ],
+    "8": [
+      {
+        "reference": "Leviticus 20-25",
+        "url": "https://www.biblegateway.com/passage/?search=Leviticus+20-25&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Leviticus 26",
+        "url": "https://www.biblegateway.com/passage/?search=Leviticus+26&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 7-12",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+7-12&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 13-18",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+13-18&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 19-24",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+19-24&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 25-27",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+25-27&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 90",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+90&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 15-17",
+        "url": "https://www.biblegateway.com/passage/?search=John+15-17&version=NIV",
+        "verified": true
+      }
+    ],
+    "9": [
+      {
+        "reference": "Numbers 28-33",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+28-33&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Numbers 34-35",
+        "url": "https://www.biblegateway.com/passage/?search=Numbers+34-35&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Deuteronomy 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Deuteronomy+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Deuteronomy 7-12",
+        "url": "https://www.biblegateway.com/passage/?search=Deuteronomy+7-12&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Deuteronomy 13-18",
+        "url": "https://www.biblegateway.com/passage/?search=Deuteronomy+13-18&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Deuteronomy 19-24",
+        "url": "https://www.biblegateway.com/passage/?search=Deuteronomy+19-24&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Deuteronomy 25-28",
+        "url": "https://www.biblegateway.com/passage/?search=Deuteronomy+25-28&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 18-19",
+        "url": "https://www.biblegateway.com/passage/?search=John+18-19&version=NIV",
+        "verified": true
+      }
+    ],
+    "10": [
+      {
+        "reference": "Deuteronomy 29-34",
+        "url": "https://www.biblegateway.com/passage/?search=Deuteronomy+29-34&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 91",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+91&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Joshua 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Joshua+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Joshua 7-8",
+        "url": "https://www.biblegateway.com/passage/?search=Joshua+7-8&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "John 20-21",
+        "url": "https://www.biblegateway.com/passage/?search=John+20-21&version=NIV",
+        "verified": true
+      }
+    ],
+    "11": [
+      {
+        "reference": "Joshua 9-14",
+        "url": "https://www.biblegateway.com/passage/?search=Joshua+9-14&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Joshua 15-20",
+        "url": "https://www.biblegateway.com/passage/?search=Joshua+15-20&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Joshua 21-24",
+        "url": "https://www.biblegateway.com/passage/?search=Joshua+21-24&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Judges 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Judges+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Judges 7-12",
+        "url": "https://www.biblegateway.com/passage/?search=Judges+7-12&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Judges 13-18",
+        "url": "https://www.biblegateway.com/passage/?search=Judges+13-18&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Judges 19-21",
+        "url": "https://www.biblegateway.com/passage/?search=Judges+19-21&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Ruth 1-4",
+        "url": "https://www.biblegateway.com/passage/?search=Ruth+1-4&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Colossians 1-4",
+        "url": "https://www.biblegateway.com/passage/?search=Colossians+1-4&version=NIV",
+        "verified": true
+      }
+    ],
+    "12": [
+      {
+        "reference": "1 Samuel 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=1+Samuel+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Samuel 7-12",
+        "url": "https://www.biblegateway.com/passage/?search=1+Samuel+7-12&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Samuel 13-18",
+        "url": "https://www.biblegateway.com/passage/?search=1+Samuel+13-18&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 11",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+11&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Philippians 1-4",
+        "url": "https://www.biblegateway.com/passage/?search=Philippians+1-4&version=NIV",
+        "verified": true
+      }
+    ],
+    "13": [
+      {
+        "reference": "1 Samuel 19-24",
+        "url": "https://www.biblegateway.com/passage/?search=1+Samuel+19-24&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 27",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+27&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 52",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+52&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Samuel 25-27",
+        "url": "https://www.biblegateway.com/passage/?search=1+Samuel+25-27&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 56",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+56&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 140-142",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+140-142&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Samuel 28-30",
+        "url": "https://www.biblegateway.com/passage/?search=1+Samuel+28-30&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Chronicles 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=1+Chronicles+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Chronicles 7-10",
+        "url": "https://www.biblegateway.com/passage/?search=1+Chronicles+7-10&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "James 1-4",
+        "url": "https://www.biblegateway.com/passage/?search=James+1-4&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Philemon",
+        "url": "https://www.biblegateway.com/passage/?search=Philemon&version=NIV",
+        "verified": true
+      }
+    ],
+    "14": [
+      {
+        "reference": "Psalm 121-126",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+121-126&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 127-130",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+127-130&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "2 Samuel 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=2+Samuel+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "2 Samuel 7-10",
+        "url": "https://www.biblegateway.com/passage/?search=2+Samuel+7-10&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 60",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+60&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Timothy 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=1+Timothy+1-6&version=NIV",
+        "verified": true
+      }
+    ],
+    "15": [
+      {
+        "reference": "2 Samuel 11-16",
+        "url": "https://www.biblegateway.com/passage/?search=2+Samuel+11-16&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "2 Samuel 17-22",
+        "url": "https://www.biblegateway.com/passage/?search=2+Samuel+17-22&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 3",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+3&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 63",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+63&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 7",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+7&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Titus 1-3",
+        "url": "https://www.biblegateway.com/passage/?search=Titus+1-3&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "2 Timothy 1-4",
+        "url": "https://www.biblegateway.com/passage/?search=2+Timothy+1-4&version=NIV",
+        "verified": true
+      }
+    ],
+    "16": [
+      {
+        "reference": "1 Chronicles 11-16",
+        "url": "https://www.biblegateway.com/passage/?search=1+Chronicles+11-16&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Chronicles 17-22",
+        "url": "https://www.biblegateway.com/passage/?search=1+Chronicles+17-22&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Chronicles 23-28",
+        "url": "https://www.biblegateway.com/passage/?search=1+Chronicles+23-28&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Chronicles 29",
+        "url": "https://www.biblegateway.com/passage/?search=1+Chronicles+29&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Kings 1-2",
+        "url": "https://www.biblegateway.com/passage/?search=1+Kings+1-2&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 4-6",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+4-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 7-10",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+7-10&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 12-17",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+12-17&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 18-23",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+18-23&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 24-26",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+24-26&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 28-33",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+28-33&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 34-39",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+34-39&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 40-41",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+40-41&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Hebrews 1-4",
+        "url": "https://www.biblegateway.com/passage/?search=Hebrews+1-4&version=NIV",
+        "verified": true
+      }
+    ],
+    "17": [
+      {
+        "reference": "Psalm 42-47",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+42-47&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 48-51",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+48-51&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 53-55",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+53-55&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 57-59",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+57-59&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 61-62",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+61-62&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 64-69",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+64-69&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 70-71",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+70-71&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 73-78",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+73-78&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 79-84",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+79-84&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 85-90",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+85-90&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 91-96",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+91-96&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 97-102",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+97-102&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 103-108",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+103-108&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 109-114",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+109-114&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 115-120",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+115-120&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 121-126",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+121-126&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 128-133",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+128-133&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 134-139",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+134-139&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 140-145",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+140-145&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Psalm 146-150",
+        "url": "https://www.biblegateway.com/passage/?search=Psalm+146-150&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Hebrews 5-10",
+        "url": "https://www.biblegateway.com/passage/?search=Hebrews+5-10&version=NIV",
+        "verified": true
+      }
+    ],
+    "18": [
+      {
+        "reference": "2 Chronicles 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=2+Chronicles+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "2 Chronicles 7-12",
+        "url": "https://www.biblegateway.com/passage/?search=2+Chronicles+7-12&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "2 Chronicles 13-15",
+        "url": "https://www.biblegateway.com/passage/?search=2+Chronicles+13-15&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Kings 3-8",
+        "url": "https://www.biblegateway.com/passage/?search=1+Kings+3-8&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "1 Kings 9-10",
+        "url": "https://www.biblegateway.com/passage/?search=1+Kings+9-10&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Proverbs 1-6",
+        "url": "https://www.biblegateway.com/passage/?search=Proverbs+1-6&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Proverbs 7",
+        "url": "https://www.biblegateway.com/passage/?search=Proverbs+7&version=NIV",
+        "verified": true
+      },
+      {
+        "reference": "Hebrews 11-13",
+        "url": "https://www.biblegateway.com/passage/?search=Hebrews+11-13&version=NIV",
+        "verified": true
+      }
+    ]
+  }
+}
