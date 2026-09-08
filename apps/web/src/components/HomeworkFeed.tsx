@@ -264,6 +264,18 @@ export default function HomeworkFeed({
                   </ul>
                 )}
 
+                {/* Scripture readings link out to the passage on BibleGateway */}
+                {isReadingType(item.type) && item.external_url && !done && (
+                  <a
+                    href={item.external_url.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-3 text-sm font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    Read passage →
+                  </a>
+                )}
+
                 {/* Reflection: prompt + response box + journal photo */}
                 {reflection && (() => {
                   const attached = files[item.id]

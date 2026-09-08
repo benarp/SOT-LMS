@@ -1,40 +1,48 @@
-// Loads the Shorter Bible Reading Plan into homework_items.
+// Loads a "Journey Through the Bible" reading-plan PDF into homework_items.
 //
-// Source: "SOT Student Manual 2024-2025" pp.11-22. The Align scrape never
-// captured the readings (legacy_lesson_steps has no body column — its lesson 1
-// is titled 'Bible Reading Plan PDF'), so the manual is the only source.
+// Structure comes from scripts/parse-reading-plan.js. Per week the PDF gives
+// five survey readings (the Shorter plan) and one "ENTIRE BIBLE PLAN" line
+// (the Whole Bible plan).
 //
-// Each DAY becomes its own homework_item so students can tick days off
-// individually. All five share the week's due date; the week's other items
-// (video, reflection) are pushed after them in sort order.
+//   Shorter -> one item per day, five checkboxes, bible_plan='shorter'
+//   Whole   -> a single item for the week, bible_plan='whole'
 //
-// Manual rows are keyed by 2024-25 dates; those are discarded and rows map
-// sequentially onto this year's weeks. Readings are transcribed by hand —
-// always review --dry-run output against the PDF before applying.
+// The Whole plan is one item because the manual states the entire-Bible
+// reading is deliberately undivided ("you will divide it as you desire").
+// Inventing day boundaries for it across 18 weeks isn't something to guess at.
+//
+// Each item carries a BibleGateway link in external_url.
+//
+// PDF week N maps to school-year week N.
 //
 // Usage (from apps/web):
-//   node scripts/load-reading-plan.js --dry-run
-//   node scripts/load-reading-plan.js
+//   node scripts/load-reading-plan.js "/path/to/plan.pdf" --dry-run
+//   node scripts/load-reading-plan.js "/path/to/plan.pdf"
+//   node scripts/load-reading-plan.js "/path/to/plan.pdf" --weeks 1-6
 
 const fs = require('fs')
 const path = require('path')
 const { createClient } = require('@supabase/supabase-js')
+const { parse, splitReferences, biblegatewayUrl } = require('./parse-reading-plan.js')
 
 const SCHOOL_YEAR = '2026-2027'
-const PLAN = 'shorter'
 
-// weekNumber -> readings for days 1..5, verbatim from the manual's columns.
-// A null entry means that day is blank in the manual (greyed-out cell).
-// Add weeks here as they're transcribed; anything absent is left untouched.
-const READINGS = {
-  // Manual row 1 (dated 8/27), CREATION ERA
-  1: [
-    'John 1-2',
-    'Genesis 1; Genesis 2; Genesis 3',
-    'Genesis 4:1-16, 25-26; Genesis 5:1; Genesis 6:9-22; Genesis 7:7-24',
-    'Genesis 8; Genesis 9:8-17',
-    'Genesis 11:1-9; Job 1',
-  ],
+/**
+ * Corrections applied on top of what the PDF literally says.
+ *
+ * Kept as explicit overrides rather than folded into the parser so they stay
+ * visible, and so re-running against a corrected PDF is a no-op rather than
+ * silently re-applying a fix that's no longer needed.
+ *
+ * week 3 whole: the PDF reads "Job 18-42, John 3-4", repeating week 2's New
+ * Testament reading. Every other week's Entire Bible line matches that week's
+ * survey NT reading (17/18), and John 5-6 appears in no Entire Bible line at
+ * all — so a whole-Bible reader would read John 3-4 twice and skip John 5-6.
+ * Confirmed with Ben 2026-09-08; also flagged in docs/reading-plan-part-one.md
+ * for the next revision of the PDF.
+ */
+const OVERRIDES = {
+  3: { whole: 'Job 18-42, John 5-6' },
 }
 
 function loadEnvLocal() {
@@ -51,23 +59,30 @@ function loadEnvLocal() {
   return env
 }
 
-/**
- * One item (one checkbox) per day. Within a day, each scripture reference is
- * its own line so they render as a stacked bullet list on the card.
- */
-function desiredItems(dayReadings) {
+function desiredItems(week) {
   const items = []
-  dayReadings.forEach((refs, index) => {
-    if (!refs) return // blank cell in the manual
+  for (const day of week.shorter) {
     items.push({
       type: 'bible_reading',
-      title: `Day ${index + 1}`,
+      title: `Day ${day.day}`,
       description: null,
-      content: refs.split(';').map(r => r.trim()).filter(Boolean).join('\n'),
-      bible_plan: PLAN,
-      sort_order: index,
+      content: splitReferences(day.reference).join('\n'),
+      external_url: day.url,
+      bible_plan: 'shorter',
+      sort_order: items.length,
     })
-  })
+  }
+  if (week.whole) {
+    items.push({
+      type: 'bible_reading',
+      title: 'Entire Bible Plan',
+      description: 'Read at your own pace across the week.',
+      content: splitReferences(week.whole.reference).join('\n'),
+      external_url: week.whole.url,
+      bible_plan: 'whole',
+      sort_order: items.length,
+    })
+  }
   return items
 }
 
@@ -77,12 +92,41 @@ function sameAsExisting(existing, desired) {
     const e = existing[i]
     return e && e.title === d.title && e.content === d.content &&
       e.description === d.description && e.bible_plan === d.bible_plan &&
-      e.sort_order === d.sort_order
+      e.external_url === d.external_url && e.sort_order === d.sort_order
   })
 }
 
+function parseWeekFilter(arg) {
+  if (!arg) return null
+  const m = arg.match(/^(\d+)(?:-(\d+))?$/)
+  if (!m) return null
+  const from = Number(m[1])
+  const to = m[2] ? Number(m[2]) : from
+  return n => n >= from && n <= to
+}
+
 async function main() {
+  const pdfPath = process.argv[2]
   const dryRun = process.argv.includes('--dry-run')
+  const weeksArgIndex = process.argv.indexOf('--weeks')
+  const weekFilter = parseWeekFilter(weeksArgIndex > -1 ? process.argv[weeksArgIndex + 1] : null)
+
+  if (!pdfPath || pdfPath.startsWith('--')) {
+    console.error('Usage: node scripts/load-reading-plan.js <plan.pdf> [--dry-run] [--weeks 1-6]')
+    process.exit(1)
+  }
+
+  const parsed = parse(pdfPath)
+    .filter(w => !weekFilter || weekFilter(w.week))
+    .map(w => {
+      const override = OVERRIDES[w.week]
+      if (!override?.whole) return w
+      if (w.whole && w.whole.reference === override.whole) return w // PDF already fixed
+      console.log(`  ↳ week ${w.week}: overriding Entire Bible Plan`)
+      console.log(`      PDF says : ${w.whole ? w.whole.reference : '(none)'}`)
+      console.log(`      using    : ${override.whole}`)
+      return { ...w, whole: { reference: override.whole, url: biblegatewayUrl(override.whole) } }
+    })
   const env = loadEnvLocal()
   const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -92,49 +136,41 @@ async function main() {
     .from('school_years').select('id, name').eq('name', SCHOOL_YEAR).single()
   if (!year) { console.error(`No school year named "${SCHOOL_YEAR}"`); process.exit(1) }
 
-  const weekNumbers = Object.keys(READINGS).map(Number).sort((a, b) => a - b)
   const { data: weeks } = await admin
-    .from('weeks').select('id, week_number, due_date')
-    .eq('school_year_id', year.id).in('week_number', weekNumbers)
+    .from('weeks').select('id, week_number, due_date').eq('school_year_id', year.id)
 
-  console.log(`${year.name} · ${weekNumbers.length} week(s)${dryRun ? '  (DRY RUN — no writes)' : ''}\n`)
+  console.log(`${year.name} · ${parsed.length} week(s) from ${path.basename(pdfPath)}${dryRun ? '  (DRY RUN — no writes)' : ''}\n`)
 
-  let changed = 0
-  for (const weekNumber of weekNumbers) {
-    const week = (weeks ?? []).find(w => w.week_number === weekNumber)
-    if (!week) { console.error(`Week ${weekNumber}: NOT FOUND — skipped`); continue }
+  let changed = 0, skipped = 0
+  for (const pw of parsed) {
+    const week = (weeks ?? []).find(w => w.week_number === pw.week)
+    if (!week) { console.error(`Week ${pw.week}: not in ${year.name} — skipped`); skipped++; continue }
 
     const { data: allItems } = await admin
       .from('homework_items')
-      .select('id, type, title, description, content, bible_plan, sort_order')
-      .eq('week_id', week.id)
-      .order('sort_order')
+      .select('id, type, title, description, content, external_url, bible_plan, sort_order')
+      .eq('week_id', week.id).order('sort_order')
 
     const existingReadings = (allItems ?? []).filter(i => i.type === 'bible_reading')
     const otherItems = (allItems ?? []).filter(i => i.type !== 'bible_reading')
-    const desired = desiredItems(READINGS[weekNumber])
+    const desired = desiredItems(pw)
 
-    console.log(`Week ${weekNumber} — due ${String(week.due_date).slice(0, 10)}`)
-    console.log(`  replacing ${existingReadings.length} scripture item(s) with ${desired.length} day item(s):`)
+    const flag = pw.ok ? '' : `  ⚠ ${pw.dayCount} day(s) in source`
+    console.log(`Week ${pw.week} — due ${String(week.due_date).slice(0, 10)} — ${desired.length} item(s)${flag}`)
     for (const d of desired) {
-      console.log(`    [${d.sort_order}] ${d.title}`)
-      for (const line of d.content.split('\n')) console.log(`         • ${line}`)
-    }
-    if (otherItems.length) {
-      console.log(`  other items shifted after: ${otherItems.map(i => `${i.title} → sort ${desired.length + otherItems.indexOf(i)}`).join(', ')}`)
+      console.log(`  [${d.sort_order}] ${d.title}  (${d.bible_plan})`)
+      for (const line of d.content.split('\n')) console.log(`        • ${line}`)
     }
 
     if (sameAsExisting(existingReadings, desired)) { console.log('  (already up to date)\n'); continue }
 
-    // Never destroy work: refuse if anything has been submitted against the
-    // items we'd be removing.
     if (existingReadings.length > 0) {
       const { count } = await admin
-        .from('submissions')
-        .select('*', { count: 'exact', head: true })
+        .from('submissions').select('*', { count: 'exact', head: true })
         .in('homework_item_id', existingReadings.map(i => i.id))
       if (count && count > 0) {
-        console.error(`  SKIPPED — ${count} submission(s) exist on the current scripture items; refusing to delete them.\n`)
+        console.error(`  SKIPPED — ${count} submission(s) exist on this week's scripture items; refusing to delete them.\n`)
+        skipped++
         continue
       }
     }
@@ -146,25 +182,20 @@ async function main() {
       const { error } = await admin.from('homework_items').delete().in('id', existingReadings.map(i => i.id))
       if (error) { console.error(`  DELETE FAILED: ${error.message}`); process.exit(1) }
     }
-
     const { error: insertError } = await admin
-      .from('homework_items')
-      .insert(desired.map(d => ({ ...d, week_id: week.id })))
+      .from('homework_items').insert(desired.map(d => ({ ...d, week_id: week.id })))
     if (insertError) { console.error(`  INSERT FAILED: ${insertError.message}`); process.exit(1) }
 
-    // Keep video/reflection after the day items
     for (let i = 0; i < otherItems.length; i++) {
       await admin.from('homework_items')
-        .update({ sort_order: desired.length + i })
-        .eq('id', otherItems[i].id)
+        .update({ sort_order: desired.length + i }).eq('id', otherItems[i].id)
     }
-
     console.log('  updated\n')
   }
 
   console.log(dryRun
-    ? `DRY RUN — ${changed} week(s) would change. Check the readings against the PDF before applying.`
-    : `Done — ${changed} week(s) updated.`)
+    ? `DRY RUN — ${changed} week(s) would change, ${skipped} skipped.`
+    : `Done — ${changed} week(s) updated, ${skipped} skipped.`)
 }
 
 main().catch(e => { console.error(e); process.exit(1) })

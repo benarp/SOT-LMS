@@ -231,6 +231,16 @@ export default function ItemDetailScreen() {
           </View>
         )}
 
+        {/* Scripture readings link out to the passage on BibleGateway */}
+        {(item.type === 'bible_reading' || item.type === 'book_reading') && item.external_url && (
+          <Text
+            style={styles.passageLink}
+            onPress={() => Linking.openURL(item.external_url!.trim())}
+          >
+            Read passage →
+          </Text>
+        )}
+
         {/* Reflection: prompt + response box */}
         {item.type === 'reflection' && (
           <>
@@ -301,6 +311,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   attribution: { fontSize: 12, color: colors.textFaint, lineHeight: 17, marginBottom: 16 },
   attributionLink: { color: colors.info, textDecorationLine: 'underline' },
+  passageLink: { color: colors.info, fontSize: 15, fontWeight: '600', marginTop: 16 },
   daysContainer: {
     marginTop: 16,
     backgroundColor: colors.surface,
