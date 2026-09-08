@@ -16,6 +16,7 @@ type Week = {
   due_date: string
   completedCount: number
   totalCount: number
+  upcoming: boolean
 }
 
 export default function HistoryScreen() {
@@ -34,12 +35,13 @@ export default function HistoryScreen() {
       .from('school_years').select('id').eq('is_active', true).single()
     if (!schoolYear) { setLoading(false); return }
 
+    // The whole year in order, not just what's already due — weeks with no
+    // curriculum loaded yet are dropped below rather than shown as empty rows.
     const { data: allWeeks } = await supabase
       .from('weeks')
       .select('id, week_number, title, due_date')
       .eq('school_year_id', schoolYear.id)
-      .lt('due_date', new Date().toISOString())
-      .order('due_date', { ascending: false })
+      .order('week_number', { ascending: true })
 
     if (!allWeeks || allWeeks.length === 0) { setLoading(false); setRefreshing(false); return }
 
@@ -62,11 +64,17 @@ export default function HistoryScreen() {
       itemsByWeek.get(item.week_id)!.push(item.id)
     }
 
+    const now = Date.now()
     setWeeks(allWeeks.map(w => {
       const weekItems = itemsByWeek.get(w.id) || []
       const completedCount = weekItems.filter(id => submittedIds.has(id)).length
-      return { ...w, completedCount, totalCount: weekItems.length }
-    }))
+      return {
+        ...w,
+        completedCount,
+        totalCount: weekItems.length,
+        upcoming: new Date(w.due_date).getTime() > now,
+      }
+    }).filter(w => w.totalCount > 0))
     setLoading(false)
     setRefreshing(false)
   }, [])
@@ -87,10 +95,10 @@ export default function HistoryScreen() {
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={colors.text} />}
       >
-        <Text style={styles.heading}>Previous weeks</Text>
+        <Text style={styles.heading}>Curriculum</Text>
 
         {weeks.length === 0 ? (
-          <Text style={styles.empty}>No past weeks yet.</Text>
+          <Text style={styles.empty}>No curriculum yet.</Text>
         ) : (
           <View style={styles.list}>
             {weeks.map(week => {
@@ -116,6 +124,7 @@ export default function HistoryScreen() {
                       <Text style={styles.weekTitle}>{week.title}</Text>
                       <Text style={styles.dueDate}>
                         Due {new Date(week.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {week.upcoming ? '  ·  Upcoming' : ''}
                       </Text>
                     </View>
                     <View style={badgeStyle(colors, allDone)}>

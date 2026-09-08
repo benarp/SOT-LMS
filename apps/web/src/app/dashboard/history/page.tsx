@@ -17,24 +17,26 @@ export default async function HistoryPage() {
   if (!schoolYear) {
     return (
       <div>
-        <h1 className="text-2xl font-medium text-gray-900">Previous weeks</h1>
+        <h1 className="text-2xl font-medium text-gray-900">Curriculum</h1>
         <p className="mt-4 text-sm text-gray-400">No active school year.</p>
       </div>
     )
   }
 
+  // The whole year in order, not just what's already due — students use this
+  // to read ahead. Weeks with no curriculum loaded yet are dropped below, so
+  // the list grows on its own as content lands rather than showing empty rows.
   const { data: weeks } = await supabase
     .from('weeks')
     .select('id, week_number, title, due_date')
     .eq('school_year_id', schoolYear.id)
-    .lt('due_date', new Date().toISOString())
-    .order('week_number', { ascending: false })
+    .order('week_number', { ascending: true })
 
   if (!weeks || weeks.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl font-medium text-gray-900">Previous weeks</h1>
-        <p className="mt-4 text-sm text-gray-400">No past weeks yet — check back after your first class.</p>
+        <h1 className="text-2xl font-medium text-gray-900">Curriculum</h1>
+        <p className="mt-4 text-sm text-gray-400">No curriculum yet — check back after your first class.</p>
       </div>
     )
   }
@@ -60,17 +62,35 @@ export default async function HistoryPage() {
 
   const submittedIds = new Set((submissions || []).map(s => s.homework_item_id))
 
-  // Build per-week completion counts
-  const weekStats = weeks.map(week => {
-    const weekItems = (items || []).filter(i => i.week_id === week.id)
-    const completed = weekItems.filter(i => submittedIds.has(i.id)).length
-    return { ...week, total: weekItems.length, completed }
-  })
+  // Build per-week completion counts, keeping only weeks that actually have
+  // something in them for this student's plan.
+  const now = Date.now()
+  const weekStats = weeks
+    .map(week => {
+      const weekItems = (items || []).filter(i => i.week_id === week.id)
+      const completed = weekItems.filter(i => submittedIds.has(i.id)).length
+      return {
+        ...week,
+        total: weekItems.length,
+        completed,
+        upcoming: new Date(week.due_date).getTime() > now,
+      }
+    })
+    .filter(week => week.total > 0)
+
+  if (weekStats.length === 0) {
+    return (
+      <div>
+        <h1 className="text-2xl font-medium text-gray-900">Curriculum</h1>
+        <p className="mt-4 text-sm text-gray-400">No curriculum yet — check back after your first class.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-medium text-gray-900">Previous weeks</h1>
+        <h1 className="text-2xl font-medium text-gray-900">Curriculum</h1>
         <p className="text-sm text-gray-400 mt-1">{schoolYear.name}</p>
       </div>
 
@@ -96,6 +116,7 @@ export default async function HistoryPage() {
                 <p className="text-sm font-medium text-gray-900 truncate">{week.title}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   Due {dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                  {week.upcoming && <span className="ml-2 text-gray-300">· Upcoming</span>}
                 </p>
               </div>
 

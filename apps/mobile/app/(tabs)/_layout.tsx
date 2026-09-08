@@ -69,7 +69,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="history"
-        options={{ title: 'Previous Weeks', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
+        options={{ title: 'Curriculum', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
       />
     </Tabs>
   )
