@@ -2,6 +2,13 @@
 
 Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGateway **NIV**.
 
+**Dates** are the 2026–2027 school-year due dates, not the ranges printed in the PDF (which were written for a different year). The school meets Tuesdays; weeks 1–18 run Sep 8, 2026 → Jan 26, 2027. Two break weeks fall inside Part One, which is why the dates jump:
+
+- **Nov 24, 2026** — Thanksgiving week (between weeks 11 and 12)
+- **Dec 22 & 29, 2026** — Christmas and New Year (between weeks 14 and 15)
+
+The calendar itself lives in `apps/web/scripts/set-week-dates.js`; change it there and re-run rather than editing due dates by hand.
+
 **Known gaps in the source PDF:**
 
 - **Week 15** has only 4 days — there is no Day 5 in the document.
@@ -10,7 +17,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 
 ---
 
-## Week 1 — Aug 28–Sep 3
+## Week 1 — due Tue, Sep 8, 2026
 
 | Day | Reading |
 |---|---|
@@ -21,7 +28,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Genesis 11:1-9; Job 1 |
 | **Entire Bible** | Genesis 1:1-11:26, Job 1, John 1-2 |
 
-## Week 2 — Sep 4–10
+## Week 2 — due Tue, Sep 15, 2026
 
 | Day | Reading |
 |---|---|
@@ -32,7 +39,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Job 15:1-13; Job 16:1-6; Job 17:1-11 |
 | **Entire Bible** | Job 2-17, John 3-4 |
 
-## Week 3 — Sep 11–17
+## Week 3 — due Tue, Sep 22, 2026
 
 | Day | Reading |
 |---|---|
@@ -43,7 +50,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Job 40:1-14; Job 41: 1-11; Job 42 |
 | **Entire Bible** | Job 18-42, John 5-6 |  ← corrected (PDF says John 3-4)
 
-## Week 4 — Sep 18–24
+## Week 4 — due Tue, Sep 29, 2026
 
 | Day | Reading |
 |---|---|
@@ -54,7 +61,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Genesis 26:1-5; Genesis 27:1-40; Genesis 28:1-22; Genesis 35:1-15, 28-29 |
 | **Entire Bible** | Genesis 11:27-31; Genesis 12-36, John 7-8 |
 
-## Week 5 — Sep 25–Oct 1
+## Week 5 — due Tue, Oct 6, 2026
 
 | Day | Reading |
 |---|---|
@@ -65,7 +72,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Exodus 1:6-14, 22; Exodus 2; Exodus 3:1-14, Exodus 4:1-20, 27-31 |
 | **Entire Bible** | Genesis 37-50, Exodus 1-4, John 9-10 |
 
-## Week 6 — Oct 2–8
+## Week 6 — due Tue, Oct 13, 2026
 
 | Day | Reading |
 |---|---|
@@ -76,7 +83,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Exodus 26:30-36; Exodus 27:1-9, 20-21; Exodus 28:1-3; 29-30; Exodus 29:1-9, 35-37, 45-46 |
 | **Entire Bible** | Exodus 5-29, John 11-12 |
 
-## Week 7 — Oct 9–15
+## Week 7 — due Tue, Oct 20, 2026
 
 | Day | Reading |
 |---|---|
@@ -87,7 +94,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Leviticus 9:1-7,22-24; Leviticus 10:1-3; Leviticus 16:15-17, 20-22, 29-31; Leviticus 18:1-26; Leviticus 19:1-4,9-18,30-37 |
 | **Entire Bible** | Exodus 30-40, Numbers 1-9, Leviticus 1-19, John 13-14 |
 
-## Week 8 — Oct 16–22
+## Week 8 — due Tue, Oct 27, 2026
 
 | Day | Reading |
 |---|---|
@@ -98,7 +105,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Numbers 22; Numbers 23:1-12; Numbers 24:10-12; Numbers 25:1-9; Numbers 27:12-23 |
 | **Entire Bible** | Leviticus 20-26, Numbers 1-27, Psalm 90, John 15-17 |
 
-## Week 9 — Oct 23–29
+## Week 9 — due Tue, Nov 3, 2026
 
 | Day | Reading |
 |---|---|
@@ -109,7 +116,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Deuteronomy 26:1-11; Deuteronomy 27:1-10; Deuteronomy 28:1-10, 15-25, 64-68 |
 | **Entire Bible** | Numbers 28-35, Deuteronomy 1-28, John 18-19 |
 
-## Week 10 — Oct 30–Nov 5
+## Week 10 — due Tue, Nov 10, 2026
 
 | Day | Reading |
 |---|---|
@@ -120,7 +127,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Joshua 5:1-5, 8-15; Joshua 6:1-23; Joshua 7:1-12, 16-24; Joshua 8:1-2, 11-23, 30-35 |
 | **Entire Bible** | Deuteronomy 29-34, Psalm 91, Joshua 1-8, John 20-21 |
 
-## Week 11 — Nov 6–12
+## Week 11 — due Tue, Nov 17, 2026
 
 | Day | Reading |
 |---|---|
@@ -131,7 +138,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Judges 19:1-3, 9-30; Judges 20:1-14, 19-29, 34-36, Judges 21:25; Ruth 1:1-9, 16-21; Ruth 2:1-12, 17-20; Ruth 3; Ruth 4:13-17 |
 | **Entire Bible** | Joshua 9-24, Judges 1-21, Ruth, Colossians 1-4 |
 
-## Week 12 — Nov 13–19
+## Week 12 — due Tue, Dec 1, 2026
 
 | Day | Reading |
 |---|---|
@@ -142,7 +149,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | 1 Samuel 15:1-3, 7-35; 1 Samuel 16:1-14, 21-23; 1 Samuel 17:1-51; 1 Samuel 18:1-9; Psalm 11 |
 | **Entire Bible** | 1 Samuel 1-18, Psalm 11, Philippians 1-4 |
 
-## Week 13 — Nov 20–26
+## Week 13 — due Tue, Dec 8, 2026
 
 | Day | Reading |
 |---|---|
@@ -153,7 +160,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | 1 Samuel 28:1-20; 1 Samuel 29:1-6, 11; 1 Samuel 30:1-20; 1 Chronicles 10:1-14 |
 | **Entire Bible** | 1 Samuel 19-24; Psalm 27, 52; 1 Samuel 25-27; Psalm 56, Psalm 140-142; 1 Samuel 28-30, 1 Chronicles 1-10, James 1-4, Philemon |
 
-## Week 14 — Nov 27–Dec 3
+## Week 14 — due Tue, Dec 15, 2026
 
 | Day | Reading |
 |---|---|
@@ -164,7 +171,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | 2 Samuel 6:12-23; 2 Samuel 7; Psalm 60; 2 Samuel 9 |
 | **Entire Bible** | Psalm 121-130, 2 Samuel 1-10, Psalm 60, 1 Timothy 1-6 |
 
-## Week 15 — Dec 4–10
+## Week 15 — due Tue, Jan 5, 2027
 
 | Day | Reading |
 |---|---|
@@ -175,7 +182,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | *(missing in source)* |
 | **Entire Bible** | 2 Samuel 11-22, Psalm 3, 63, 7, Titus 1-3, 2 Timothy 1-4 |
 
-## Week 16 — Dec 11–17
+## Week 16 — due Tue, Jan 12, 2027
 
 | Day | Reading |
 |---|---|
@@ -186,7 +193,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Psalm 28; Psalm 31; Psalm 38; Psalm 41 |
 | **Entire Bible** | 1 Chronicles 11-29; 1 Kings 1-2, Psalm 4-6, 7-10, 12-26. 28-41, Hebrews 1-4 |
 
-## Week 17 — Dec 18–24
+## Week 17 — due Tue, Jan 19, 2027
 
 | Day | Reading |
 |---|---|
@@ -197,7 +204,7 @@ Parsed from `PART ONE-JOURNEY THROUGH THE BIBLE Final.pdf`. Links are BibleGatew
 | 5 | Psalm 73; Psalm 82; Psalm 83; 1 Kings 2:13-27; 1 Kings 3:1-4 |
 | **Entire Bible** | Psalm 42-51, 53-55, 57-59, 61-62, 64-71, 73-126, 128-150, Hebrews 5-10 |
 
-## Week 18 — Dec 25–31
+## Week 18 — due Tue, Jan 26, 2027
 
 | Day | Reading |
 |---|---|
