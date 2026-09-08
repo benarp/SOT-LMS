@@ -181,7 +181,13 @@ Still need: confirm `RESEND_API_KEY` is set in Vercel environment variables for 
 
 ---
 
-### 3. Supabase Auth — Enable Custom SMTP
+### 3. Supabase Auth — Enable Custom SMTP — DONE (2026-09-07)
+Custom SMTP is now enabled against Resend (`smtp.resend.com:587`, sender
+`admin@schooloftransformation.app`), the Supabase auth email rate limit was raised, and
+forgot-password was retested end-to-end with inbox (not spam) delivery confirmed.
+
+Original diagnosis, kept for context:
+
 Discovered 2026-07-15 while troubleshooting Luke McGrath's forgot-password issue: his `/recover`
 requests all returned 200 but no email ever arrived (confirmed via auth logs — no 429s, so not
 the rate limit). Root cause: Supabase project has **Custom SMTP disabled**, so all auth emails
@@ -224,13 +230,42 @@ earlier two fixes were real but couldn't matter until this one landed.
 ---
 
 ### 4. CSV Student Import
-Admin students page has a UI placeholder. Bulk import not yet implemented.
+Admin students page has a UI placeholder. Bulk import not yet implemented as a *feature* —
+the 2026–2027 migration was done with a one-off script instead (see below).
 
 **Spec:**
 - Upload CSV with columns: `name`, `email`, (optionally `group`)
 - Preview imported rows before confirming
 - Creates accounts and sends password setup emails in bulk
 - Skips rows where email already exists; reports errors
+
+---
+
+### 4b. 2026–2027 Align migration — IN PROGRESS (2026-09-07)
+Migrating the cohort off the previous platform ("Align").
+
+**Done:**
+- School year `2026-2027` created (inactive) with 32 Tuesday weeks (9/1/2026–5/11/2027,
+  skipping Thanksgiving, winter break, Easter/spring break) + placeholder homework for
+  weeks 1–6 — `apps/web/supabase/setup-2026-2027-year.sql`
+- `profiles.phone` / `profiles.gender` added, admin-only via column-level `REVOKE SELECT`
+  — `apps/web/supabase/migration-profile-contact-fields.sql`
+- 28 student accounts created from the Align roster export —
+  `apps/web/scripts/import-align-roster.js`
+- Students/group leaders gated behind `/coming-soon` via the `COMING_SOON` flag in
+  `apps/web/src/proxy.ts` (flip to `false` to launch; `/reset-password` stays reachable)
+
+**Open:**
+- **3 students never received a password-setup email** (rate-limited during the import, before
+  Custom SMTP was enabled): Yolanda Prado, Teresa Dutra, Rae Mayforth. The other 25 were sent
+  via Supabase's old shared mailer, so delivery is unconfirmed — a re-send to all 28 is likely
+  warranted but has NOT been done (deliberately deferred).
+- Groups + group leaders: being assigned manually via the admin UI, not scripted.
+- Stripe: pre-existing per-student payment plans from Align are **not** linked to
+  `billing_accounts`. `getOrCreateAccount()` only ever mints *new* Stripe customers, so
+  attaching existing customer/subscription IDs needs new code — and the webhook's
+  `invoice.payment_succeeded` path assumes the $200×10 model, which may not match the
+  real plans. Blocked on reviewing actual Stripe data.
 
 ---
 
