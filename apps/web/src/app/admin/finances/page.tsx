@@ -69,7 +69,12 @@ export default async function FinancesPage() {
           <h1 className="text-2xl font-medium text-gray-900">Finances</h1>
           <p className="text-sm text-gray-400 mt-1">{schoolYear?.name ?? 'No active school year'}</p>
         </div>
-        <ExportCsvButton rows={csvRows} yearName={schoolYear?.name ?? 'billing'} />
+        <div className="flex items-center gap-3">
+          <Link href="/admin/finances/stripe" className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-400 transition-colors">
+            View Stripe subscriptions
+          </Link>
+          <ExportCsvButton rows={csvRows} yearName={schoolYear?.name ?? 'billing'} />
+        </div>
       </div>
 
       {/* Summary cards */}
