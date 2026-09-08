@@ -23,3 +23,9 @@ build/
 # Logs
 *.log
 npm-debug.log*
+
+# Roster exports — real student names, emails, birthdates and phone numbers.
+# This repo is public; these must never be committed. Scripts read them from
+# wherever you point them (see scripts/import-align-roster.js).
+/*.csv
+students.csv
