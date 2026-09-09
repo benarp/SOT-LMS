@@ -91,19 +91,23 @@ export async function proxy(request: NextRequest) {
       return supabaseResponse
     }
 
+    // Where signing in drops you. Group leaders start on their group overview
+    // even though they can reach the student views from the nav.
+    const home = role === 'group_leader' ? '/leader' : '/dashboard'
+
     // Redirect authenticated non-applicants away from login
     if (pathname === '/login') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL(home, request.url))
     }
 
     // Redirect authenticated non-applicants away from /apply (they're already enrolled)
     if (pathname.startsWith('/apply')) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL(home, request.url))
     }
 
-    // Redirect root to dashboard
+    // Redirect root to the role's home
     if (pathname === '/') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL(home, request.url))
     }
   }
 
