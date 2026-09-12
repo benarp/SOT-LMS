@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
-import { formatDueDate } from '@/lib/dueDate'
+import { formatDueDate, formatSubmittedAt } from '@/lib/dueDate'
+import { signedUploadUrls } from '@/lib/homeworkUploads'
+import { contactsForStudents } from '@/lib/studentContacts'
+import WeekReportView, { type Column, type Reflection, type Row } from './WeekReportView'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -11,6 +13,8 @@ const typeLabels: Record<string, string> = {
   video: 'Video',
   reflection: 'Reflection',
 }
+
+const IMAGE_FILE = /\.(jpe?g|png|heic|heif|webp|gif)$/i
 
 export default async function WeekReportPage({ params }: { params: Promise<{ weekId: string }> }) {
   const { weekId } = await params
@@ -32,7 +36,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
       .order('sort_order', { ascending: true }),
     supabase
       .from('profiles')
-      .select('id, full_name, email, bible_plan')
+      .select('id, full_name, email, group_id, bible_plan')
       .eq('role', 'student')
       .order('full_name', { ascending: true }),
   ])
@@ -54,24 +58,90 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
 
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('student_id, homework_item_id, is_late, response_text, response_file_path, response_file_name')
+    .select('student_id, homework_item_id, is_late, completed_at, response_text, response_file_path, response_file_name')
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
     .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
 
-  // Signed URLs for uploaded journal photos (private bucket)
-  const admin = createAdminClient()
-  const fileUrls = new Map<string, string>()
-  for (const s of submissions || []) {
-    if (!s.response_file_path) continue
-    const { data: signed } = await admin.storage
-      .from('homework-uploads')
-      .createSignedUrl(s.response_file_path, 3600)
-    if (signed?.signedUrl) fileUrls.set(s.response_file_path, signed.signedUrl)
-  }
+  const [fileUrls, contacts] = await Promise.all([
+    signedUploadUrls((submissions || []).map(s => s.response_file_path)),
+    contactsForStudents(students || []),
+  ])
 
   const submissionMap = new Map(
     (submissions || []).map(s => [`${s.student_id}:${s.homework_item_id}`, s])
   )
+
+  const weekLabel = `Week ${week.week_number} — ${week.title}`
+
+  const columns: Column[] = (items || []).map(item => ({
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    typeLabel: typeLabels[item.type] || item.type,
+  }))
+
+  // One flat list of every reflection actually handed in. The grid cells and the
+  // drawer's Previous/Next both index into this same array, so they can never
+  // disagree about what comes next.
+  const reflections: Reflection[] = []
+  for (const student of students || []) {
+    const plan = planOf(student)
+    const contact = contacts.get(student.id)
+    for (const item of (items || []).filter(i => i.type === 'reflection')) {
+      if (!itemVisibleToPlan(item, plan)) continue
+      const submission = submissionMap.get(`${student.id}:${item.id}`)
+      if (!submission?.response_text && !submission?.response_file_path) continue
+      reflections.push({
+        key: `${student.id}:${item.id}`,
+        studentName: student.full_name || student.email,
+        groupName: contact?.groupName ?? null,
+        phone: contact?.phone ?? null,
+        phoneHref: contact?.phoneHref ?? null,
+        weekLabel,
+        itemTitle: item.title,
+        text: submission.response_text ?? null,
+        fileUrl: submission.response_file_path ? fileUrls.get(submission.response_file_path) ?? null : null,
+        fileName: submission.response_file_name ?? null,
+        isImage: submission.response_file_path ? IMAGE_FILE.test(submission.response_file_path) : false,
+        isLate: !!submission.is_late,
+        completedAt: submission.completed_at ?? null,
+        completedLabel: formatSubmittedAt(submission.completed_at),
+      })
+    }
+  }
+  reflections.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
+  const indexByKey = new Map(reflections.map((r, i) => [r.key, i]))
+
+  const rows: Row[] = (students || []).map(student => {
+    const plan = planOf(student)
+    return {
+      id: student.id,
+      name: student.full_name || student.email,
+      planLabel: BIBLE_PLAN_LABELS[plan],
+      cells: (items || []).map(item => {
+        if (!itemVisibleToPlan(item, plan)) return { itemId: item.id, state: 'na' }
+        if (item.type === 'reflection') {
+          const index = indexByKey.get(`${student.id}:${item.id}`)
+          if (index === undefined) return { itemId: item.id, state: 'missing' }
+          const reflection = reflections[index]
+          return {
+            itemId: item.id,
+            state: 'reflection',
+            reflectionIndex: index,
+            text: reflection.text,
+            isLate: reflection.isLate,
+            fileUrl: reflection.fileUrl,
+            fileName: reflection.fileName,
+            isImage: reflection.isImage,
+          }
+        }
+        const submission = submissionMap.get(`${student.id}:${item.id}`)
+        return submission
+          ? { itemId: item.id, state: 'done', isLate: !!submission.is_late }
+          : { itemId: item.id, state: 'missing' }
+      }),
+    }
+  })
 
   return (
     <div className="max-w-none">
@@ -90,82 +160,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
         </p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
-        <table className="text-sm border-collapse w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-left text-xs font-medium text-gray-400 px-4 py-3 sticky left-0 bg-white whitespace-nowrap">Student</th>
-              {(items || []).map(item => (
-                <th key={item.id} className="text-left text-xs font-medium text-gray-400 px-4 py-3 min-w-[220px] align-bottom">
-                  <span className="block text-[10px] text-gray-300 uppercase tracking-wide mb-0.5">{typeLabels[item.type] || item.type}</span>
-                  {item.title}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(students || []).map((student, i) => (
-              <tr key={student.id} className={i < (students || []).length - 1 ? 'border-b border-gray-50' : ''}>
-                <td className="px-4 py-3 font-medium text-gray-900 sticky left-0 bg-white whitespace-nowrap">
-                  {student.full_name || student.email}
-                  <span className="block text-[10px] font-normal text-gray-400">{BIBLE_PLAN_LABELS[planOf(student)]}</span>
-                </td>
-                {(items || []).map(item => {
-                  const submission = submissionMap.get(`${student.id}:${item.id}`)
-                  if (!itemVisibleToPlan(item, planOf(student))) {
-                    return (
-                      <td key={item.id} className="px-4 py-3 align-top bg-gray-50">
-                        <span className="text-xs text-gray-300">n/a — other plan</span>
-                      </td>
-                    )
-                  }
-                  return (
-                    <td key={item.id} className="px-4 py-3 align-top">
-                      {item.type === 'reflection' ? (
-                        submission?.response_text || submission?.response_file_path ? (
-                          <div>
-                            <p className="text-xs font-medium text-green-600 mb-1">
-                              Submitted{submission.is_late ? ' (late)' : ''}
-                            </p>
-                            {submission.response_text && (
-                              <p className="text-sm text-gray-700 whitespace-pre-line">{submission.response_text}</p>
-                            )}
-                            {submission.response_file_path && (
-                              fileUrls.get(submission.response_file_path) ? (
-                                <a href={fileUrls.get(submission.response_file_path)} target="_blank" rel="noopener noreferrer" className="inline-block mt-1">
-                                  {/\.(jpe?g|png|heic|heif|webp|gif)$/i.test(submission.response_file_path) ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={fileUrls.get(submission.response_file_path)} alt="Journal upload" className="max-h-40 rounded-lg border border-gray-200" />
-                                  ) : (
-                                    <span className="text-sm text-blue-600 underline">📎 {submission.response_file_name ?? 'Uploaded file'}</span>
-                                  )}
-                                </a>
-                              ) : (
-                                <span className="text-xs text-gray-400">📎 {submission.response_file_name ?? 'Uploaded file'}</span>
-                              )
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm text-red-500">Not submitted</span>
-                        )
-                      ) : submission ? (
-                        <span className="text-sm text-green-600 font-medium">
-                          Done{submission.is_late ? ' (late)' : ''}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-red-500">Not done</span>
-                      )}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
-            {(students || []).length === 0 && (
-              <tr><td colSpan={(items || []).length + 1} className="px-4 py-6 text-center text-gray-400 text-sm">No students enrolled yet.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <WeekReportView columns={columns} rows={rows} reflections={reflections} />
     </div>
   )
 }

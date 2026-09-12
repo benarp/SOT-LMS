@@ -43,3 +43,19 @@ export function formatDueDate(
 ): string {
   return new Date(due).toLocaleDateString('en-US', { ...options, timeZone: 'UTC' })
 }
+
+/**
+ * Formats a submission timestamp — a real instant, unlike a due date — in the
+ * school's time zone. Server-formatted on purpose: a relative "2 hours ago"
+ * would differ between the server pass and hydration.
+ */
+export function formatSubmittedAt(value: string | null | undefined): string {
+  if (!value) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: SCHOOL_TIME_ZONE,
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
