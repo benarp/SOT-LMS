@@ -22,8 +22,10 @@ app/
     index.tsx             # This Week — homework checklist with announcements
     open.tsx              # Open assignments across weeks
     history.tsx            # Past weeks with completion state
+    recordings.tsx         # Class session recordings, one row per week
   item/[itemId].tsx        # Homework item detail (video/reading/reflection)
   week/[weekId].tsx        # Week detail
+  recording/[weekId].tsx   # Recording detail (WebView YouTube player)
   account.tsx              # Account settings (incl. theme toggle)
 components/
   ThemeProvider.tsx         # Resolves light/dark/system, provides useTheme()
@@ -31,6 +33,7 @@ lib/
   supabase.ts               # Supabase client (AsyncStorage session persistence)
   theme.ts                  # ThemeColors tokens + LIGHT/DARK palettes
   openAssignments.ts
+  videoEmbed.ts             # getEmbedUrl — mirrors apps/web/src/lib/videoEmbed.ts
 assets/                     # Icons, splash, login-bg.jpg
 ```
 
@@ -62,7 +65,7 @@ npm run web        # expo start --web
 No CI/automation publishes builds — merging to `main` only updates source. Shipping to a device requires running an EAS build yourself; there's no `expo-updates`/OTA config wired up yet, so even source-only changes (JS/styling) need a new build, not just a merge.
 
 ## What's built
-Login, This Week (homework checklist + announcements), item detail (embedded YouTube/Vimeo player — fixed WebView embed errors 153/154, falls back to external link for non-embeddable URLs), History (past weeks), Account settings, dark mode (light/dark/system, per-device). Full status: see the "Mobile App (Expo)" section of `../../docs/plan.md`.
+Login, This Week (homework checklist + announcements), item detail (embedded YouTube/Vimeo player — fixed WebView embed errors 153/154, falls back to external link for non-embeddable URLs), History (past weeks), Recordings (class session videos, one per week; weeks with nothing posted stay in the list grayed out), Account settings, dark mode (light/dark/system, per-device). Full status: see the "Mobile App (Expo)" section of `../../docs/plan.md`.
 
 **Not yet started**: push notifications, app store submission (blocked on Apple Developer enrollment).
 

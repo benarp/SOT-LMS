@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { markComplete, markIncomplete, submitReflection, saveReflectionFile, removeReflectionFile } from '@/app/actions/submissions'
 import { createClient } from '@/lib/supabase/client'
+import { getEmbedUrl } from '@/lib/videoEmbed'
 
 type ResponseFile = { path: string; name: string; url: string | null }
 
@@ -49,26 +50,6 @@ const typeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
     ),
   },
   reflection: { label: 'Reflection', icon: reflectionIcon },
-}
-
-function getEmbedUrl(rawUrl: string): string | null {
-  try {
-    const u = new URL(rawUrl.trim())
-    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
-      const videoId = u.hostname.includes('youtu.be')
-        ? u.pathname.slice(1)
-        : u.searchParams.get('v') ?? u.pathname.split('/').pop()
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?rel=0`
-    }
-    if (u.hostname.includes('vimeo.com')) {
-      const videoId = u.pathname.split('/').filter(Boolean).pop()
-      if (videoId) return `https://player.vimeo.com/video/${videoId}`
-    }
-    // Other sites (e.g. Bible Project) typically block iframing — link out instead
-    return null
-  } catch {
-    return null
-  }
 }
 
 const isReflectionType = (type: string) => type === 'reflection'

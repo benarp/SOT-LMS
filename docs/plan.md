@@ -50,6 +50,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 ### Student Dashboard
 - **This Week** — current homework with progress bar, mark complete/incomplete
 - **History** — past weeks are fully interactive: students can complete missed items and submit/edit reflections late (marked "Submitted late")
+- **Recordings** — every week of the year in one list, with the class session video (an unlisted YouTube embed), speaker, and the date it was taught. Weeks the admin hasn't posted yet stay in the list, grayed out and unclickable, so students can see the shape of the year. Visible to students, group leaders, and admins
 - **Tuition** — payment status, Stripe Checkout setup, update card on file, payment/credit history (deposit, monthly charges, cash/check credits, refunds)
 - **Announcements** — active announcements appear at top of dashboard
 
@@ -91,6 +92,11 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - Add weeks (numbered, titled, due date)
 - Per-week: add/edit/delete homework items of any type
 
+### Admin — Recordings
+- `/admin/recordings` lists every week of the active year with its recording state
+- Per-week: title, speaker, date recorded, description, and an unlisted YouTube link
+- A recording only goes live to students once it has a video link — an admin can save the title and speaker as a draft ahead of the upload (shown as "Draft" in the admin list, still grayed out for students)
+
 ### Admin — School Year Lifecycle
 - **Complete a year** — all current students become alumni; they keep login and can view past reflections but stop receiving emails and don't appear in next year's cohort
 - **Reopen year** — undo completion if triggered by mistake
@@ -130,6 +136,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - This Week — homework checklist with announcements
 - Item detail — embedded YouTube/Vimeo player, day-by-day reading, reflection response box
 - History — past weeks with completion state
+- Recordings — class session videos, one row per week; unposted weeks stay grayed out
 - Account settings
 - **Tuition (read-only)** — payment status, balance, next/final payment dates, and payment/credit history; mirrors the web student view
 - EAS build profiles configured for cloud dev builds

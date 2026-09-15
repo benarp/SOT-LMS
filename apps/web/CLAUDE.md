@@ -38,6 +38,7 @@ src/
       layout.tsx            # Sidebar nav, role-aware
       page.tsx              # This week's homework
       history/[weekId]/     # Past weeks — fully interactive (late completion/reflections)
+      recordings/[weekId]/  # Class session recordings (unlisted YouTube embeds)
       billing/              # Tuition status, Stripe Checkout/portal
       account/              # Self-service profile settings
     leader/                 # Group-leader read-only view (students/[studentId])
@@ -45,6 +46,7 @@ src/
     admin/                  # Admin panel
       students/[id]/        # Profile edit, role/group, billing panel, impersonation
       curriculum/[weekId]/  # School years, weeks, homework items
+      recordings/           # Create/edit the per-week class recording
       applications/[id]/settings/  # Admissions pipeline + form builder
       announcements/, finances/, reports/[weekId]/, settings/
     api/
@@ -57,7 +59,7 @@ src/
     ThemeToggle.tsx, BillingActions.tsx
     admin/                  # Admin-only form/action components
   lib/
-    auth.ts, billing.ts
+    auth.ts, billing.ts, videoEmbed.ts
     supabase/
       client.ts             # Browser client
       server.ts             # Server client (uses cookies)
@@ -69,7 +71,7 @@ supabase/
   export-auth-users.sql, fix-trigger*.sql   # One-off utility scripts
 ```
 
-## Database schema (16 tables)
+## Database schema (17 tables)
 - `profiles` — extends auth.users; `role` (`user_role` enum), `group_id`, `birthday`, `alumni_year_id`, `email_opt_out`, `unsubscribe_token`, `phone`, `gender` (`phone`/`gender` are admin-only — column-level `REVOKE SELECT` from `authenticated`, not visible to the owning student or their group leader)
 - `school_years` — one active at a time (`is_active`); `completed_at` when a year is finished
 - `groups` — discipleship groups, each with a `leader_id`
@@ -77,6 +79,7 @@ supabase/
 - `homework_items` — belong to a week; types: `bible_reading`, `book_reading`, `video`, `reflection` (typed response and/or file upload, via `submissions`)
 - `submissions` — completion records (student_id + homework_item_id, unique); `is_late` flag; `response_text` and `response_file_path`/`response_file_name` for reflection uploads
 - `announcements` — admin-published; `publish_at` supports scheduling; `target_group_id` null = all students
+- `recordings` — one per week (`week_id` unique); class session video for students. `title`, `speaker`, `recorded_on` (the night class was taught, separate from the week's homework `due_date`), `description`, and `video_url` (an unlisted YouTube link). A week with no row — or a row with a blank `video_url` — renders grayed out and unclickable, so admins can save a draft ahead of the upload
 - `billing_accounts` — one per student per school year; Stripe customer/subscription IDs, status, cycles paid, totals, credits applied
 - `billing_events` — audit trail of every charge, failure, pause/resume, credit, refund, and offline cash/check payment
 - `audit_log` — admin actions: impersonation, role changes, deactivation, invites, profile edits, billing actions
@@ -137,7 +140,7 @@ npm run dev
 ```
 
 ## What's built
-Full detail lives in [`docs/plan.md`](../../docs/plan.md); short version — auth/roles, student dashboard (this week, history, billing, announcements), the full admissions pipeline (public apply flow, admin-authored form builder, pastoral reference step, pipeline stages), admin panel (curriculum, students, finances, reports, announcements), Stripe billing (deposit + subscription, pause/resume/credit/refund/cancel, offline cash/check payments), weekly email digest via Resend, dark mode (web + mobile), and a companion Expo mobile app (see `apps/mobile/CLAUDE.md`).
+Full detail lives in [`docs/plan.md`](../../docs/plan.md); short version — auth/roles, student dashboard (this week, history, recordings, billing, announcements), the full admissions pipeline (public apply flow, admin-authored form builder, pastoral reference step, pipeline stages), admin panel (curriculum, students, finances, reports, announcements), Stripe billing (deposit + subscription, pause/resume/credit/refund/cancel, offline cash/check payments), weekly email digest via Resend, dark mode (web + mobile), and a companion Expo mobile app (see `apps/mobile/CLAUDE.md`).
 
 **Recently shipped** (this session): login page background image (web + mobile), and the admin billing panel now shows Pause/Apply credit/Refund/Cancel billing in a disabled state (instead of hidden) before a student has a billing account.
 

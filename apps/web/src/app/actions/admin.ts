@@ -127,6 +127,55 @@ export async function deleteHomeworkItem(itemId: string, weekId: string): Promis
   return {}
 }
 
+// ── Recordings ──────────────────────────────────────────────
+
+export async function saveRecording(formData: FormData): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
+  const supabase = await createClient()
+
+  const weekId = formData.get('weekId') as string
+  const title = ((formData.get('title') as string) || '').trim()
+  const speaker = ((formData.get('speaker') as string) || '').trim() || null
+  const videoUrl = ((formData.get('videoUrl') as string) || '').trim() || null
+  // A date input already hands back YYYY-MM-DD, which is what a `date` column
+  // wants. Round-tripping it through new Date().toISOString() would shift it a
+  // day for anyone west of UTC — the bug fixed for due dates in fb90f75.
+  const recordedOn = ((formData.get('recordedOn') as string) || '') || null
+  const description = ((formData.get('description') as string) || '').trim() || null
+
+  if (!title) return { error: 'Title is required.' }
+
+  const { error } = await supabase
+    .from('recordings')
+    .upsert({
+      week_id: weekId,
+      title,
+      speaker,
+      video_url: videoUrl,
+      recorded_on: recordedOn,
+      description,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'week_id' })
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/recordings')
+  revalidatePath('/dashboard/recordings')
+  return {}
+}
+
+export async function deleteRecording(weekId: string): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('recordings').delete().eq('week_id', weekId)
+  if (error) return { error: error.message }
+  revalidatePath('/admin/recordings')
+  revalidatePath('/dashboard/recordings')
+  return {}
+}
+
 // ── Announcements ───────────────────────────────────────────
 
 export async function createAnnouncement(formData: FormData): Promise<{ error?: string }> {
