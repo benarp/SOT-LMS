@@ -12,6 +12,7 @@ import { adjustOpenCount } from '../../lib/openAssignments'
 import { useTheme, type ThemeColors } from '../../lib/theme'
 import { asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '../../lib/biblePlan'
 import { isPastDue } from '../../lib/dueDate'
+import { getEmbedUrl } from '../../lib/videoEmbed'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const VIDEO_HEIGHT = Math.round((SCREEN_WIDTH - 32) * 9 / 16)
@@ -27,30 +28,6 @@ type Item = {
   completed: boolean
   due_date: string
   show_attribution?: boolean
-}
-
-function getEmbedUrl(rawUrl: string): string | null {
-  // Stored URLs may have stray whitespace; iOS WebKit rejects them outright
-  const url = rawUrl.trim()
-  try {
-    const u = new URL(url)
-    // YouTube
-    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
-      const videoId = u.hostname.includes('youtu.be')
-        ? u.pathname.slice(1)
-        : u.searchParams.get('v') ?? u.pathname.split('/').pop()
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0`
-    }
-    // Vimeo
-    if (u.hostname.includes('vimeo.com')) {
-      const videoId = u.pathname.split('/').filter(Boolean).pop()
-      if (videoId) return `https://player.vimeo.com/video/${videoId}`
-    }
-    // Bible Project and others — embed as-is
-    return url
-  } catch {
-    return url
-  }
 }
 
 export default function ItemDetailScreen() {
