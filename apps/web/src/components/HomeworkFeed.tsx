@@ -5,7 +5,7 @@ import { markComplete, markIncomplete, submitReflection, saveReflectionFile, rem
 import { createClient } from '@/lib/supabase/client'
 import { getEmbedUrl } from '@/lib/videoEmbed'
 
-type ResponseFile = { path: string; name: string; url: string | null }
+type ResponseFile = { path: string; name: string; url: string | null; rotation?: number }
 
 type HomeworkItem = {
   id: string
@@ -279,7 +279,13 @@ export default function HomeworkFeed({
                         <div className="mt-2 flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-lg p-2">
                           {attached.url && isImageFile(attached.name) ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={attached.url} alt="Your journal photo" className="w-16 h-16 object-cover rounded-md border border-gray-200" />
+                            <img
+                              src={attached.url}
+                              alt="Your journal photo"
+                              // Square thumbnail, so an admin's quarter turn needs no resizing.
+                              style={attached.rotation ? { transform: `rotate(${attached.rotation}deg)` } : undefined}
+                              className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                            />
                           ) : (
                             <span className="text-xl px-2" aria-hidden>📎</span>
                           )}

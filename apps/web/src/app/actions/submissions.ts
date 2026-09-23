@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { isPastDue } from '@/lib/dueDate'
+import { requireAdmin } from '@/lib/auth'
 
 const UPLOAD_BUCKET = 'homework-uploads'
 
@@ -85,6 +86,7 @@ export async function saveReflectionFile(
     completed_at: new Date().toISOString(),
     response_file_path: filePath,
     response_file_name: fileName,
+    response_file_rotation: 0,
   }, { onConflict: 'student_id,homework_item_id' })
   if (error) return { error: error.message }
 
@@ -119,7 +121,7 @@ export async function removeReflectionFile(homeworkItemId: string): Promise<{ er
   // Without a typed response the item is no longer answered at all
   if (submission.response_text?.trim()) {
     const { error } = await supabase.from('submissions')
-      .update({ response_file_path: null, response_file_name: null })
+      .update({ response_file_path: null, response_file_name: null, response_file_rotation: 0 })
       .eq('id', submission.id)
     if (error) return { error: error.message }
   } else {
@@ -145,4 +147,38 @@ export async function markIncomplete(homeworkItemId: string) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/dashboard', 'layout')
+}
+
+const ROTATIONS = [0, 90, 180, 270]
+
+/**
+ * Straighten a journal photo that was uploaded sideways or upside down.
+ *
+ * Admin-only, and written with the service-role client on purpose: admins have
+ * select-only RLS on other students' submissions, and a policy broad enough to
+ * let them update this column would also let them rewrite the reflection text.
+ */
+export async function setReflectionRotation(
+  submissionId: string,
+  rotation: number
+): Promise<{ error?: string }> {
+  try {
+    await requireAdmin()
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Not authorized' }
+  }
+
+  if (!ROTATIONS.includes(rotation)) return { error: 'Unsupported rotation' }
+
+  const { error } = await createAdminClient()
+    .from('submissions')
+    .update({ response_file_rotation: rotation })
+    .eq('id', submissionId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/reflections')
+  revalidatePath('/admin/reports', 'layout')
+  revalidatePath('/dashboard', 'layout')
+  return {}
 }

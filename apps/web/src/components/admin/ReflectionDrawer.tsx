@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { setReflectionRotation } from '@/app/actions/submissions'
 
 export type Reflection = {
   key: string
+  submissionId: string
   studentName: string
   groupName: string | null
   phone: string | null
@@ -14,6 +16,8 @@ export type Reflection = {
   fileUrl: string | null
   fileName: string | null
   isImage: boolean
+  /** Clockwise degrees an admin has already straightened this photo by. */
+  rotation: number
   isLate: boolean
   completedAt: string | null
   completedLabel: string
@@ -112,14 +116,20 @@ export default function ReflectionDrawer({ reflections, index, onClose, onNaviga
             <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{reflection.text}</p>
           )}
 
-          {reflection.fileUrl && (
+          {reflection.fileUrl && reflection.isImage && (
+            // Keyed by reflection so each photo starts from its own saved rotation
+            // rather than inheriting the last one's turn.
+            <RotatableImage
+              key={reflection.key}
+              src={reflection.fileUrl}
+              submissionId={reflection.submissionId}
+              initialRotation={reflection.rotation}
+            />
+          )}
+
+          {reflection.fileUrl && !reflection.isImage && (
             <a href={reflection.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-4">
-              {reflection.isImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={reflection.fileUrl} alt="Journal upload" className="rounded-lg border border-gray-200 max-w-full" />
-              ) : (
-                <span className="text-sm text-blue-600 underline">📎 {reflection.fileName ?? 'Uploaded file'}</span>
-              )}
+              <span className="text-sm text-blue-600 underline">📎 {reflection.fileName ?? 'Uploaded file'}</span>
             </a>
           )}
 
@@ -149,5 +159,105 @@ export default function ReflectionDrawer({ reflections, index, onClose, onNaviga
         </footer>
       </div>
     </>
+  )
+}
+
+/** A photo someone may have shot sideways, with quarter-turn controls for reading it. */
+function RotatableImage({
+  src,
+  submissionId,
+  initialRotation,
+}: {
+  src: string
+  submissionId: string
+  initialRotation: number
+}) {
+  const [rotation, setRotation] = useState(initialRotation)
+  const [aspect, setAspect] = useState<number | null>(null)
+  const [failed, setFailed] = useState(false)
+  const quarterTurned = rotation % 180 !== 0
+
+  // The turn shows immediately and saves behind it; if the save fails the photo
+  // stays where the admin put it for this viewing, with the reason said plainly.
+  function turn(degrees: number) {
+    const next = (rotation + degrees + 360) % 360
+    setRotation(next)
+    setFailed(false)
+    setReflectionRotation(submissionId, next)
+      .then(res => setFailed(!!res?.error))
+      .catch(() => setFailed(true))
+  }
+
+  function measure(img: HTMLImageElement | null) {
+    if (img?.naturalHeight) setAspect(img.naturalWidth / img.naturalHeight)
+  }
+
+  // An image restored from cache can finish loading before React attaches onLoad, so the
+  // ref measures whatever is already there and onLoad only covers the still-loading case.
+  const measureRef = useCallback((img: HTMLImageElement | null) => { measure(img) }, [])
+
+  // Until the photo is measured it stays in normal flow at full width — the rotating frame
+  // below takes its height from aspectRatio, which would collapse to nothing without it.
+  // A quarter turn swaps the photo's axes, so the image is then drawn at the container's
+  // height (its width x aspect) for the rotated result to fill the panel exactly.
+  return (
+    <div className="mt-4">
+      <div
+        className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
+        style={aspect ? { aspectRatio: quarterTurned ? 1 / aspect : aspect } : undefined}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          ref={measureRef}
+          src={src}
+          alt="Journal upload"
+          onLoad={e => measure(e.currentTarget)}
+          className={
+            aspect
+              ? 'absolute left-1/2 top-1/2 max-w-none transition-transform duration-200'
+              : 'block w-full'
+          }
+          style={aspect ? {
+            width: quarterTurned ? `${aspect * 100}%` : '100%',
+            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+          } : undefined}
+        />
+      </div>
+      <div className="mt-2 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => turn(-90)}
+          title="Rotate left"
+          aria-label="Rotate image left"
+          className="text-gray-400 hover:text-gray-900 transition-colors p-1 cursor-pointer"
+        >
+          <svg className="w-4 h-4 -scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M4.6 13a8 8 0 103-7.6L4 9" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => turn(90)}
+          title="Rotate right"
+          aria-label="Rotate image right"
+          className="text-gray-400 hover:text-gray-900 transition-colors p-1 cursor-pointer"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M4.6 13a8 8 0 103-7.6L4 9" />
+          </svg>
+        </button>
+        <a
+          href={src}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-2 text-xs text-gray-400 hover:text-gray-900 transition-colors"
+        >
+          Open original
+        </a>
+        {failed && (
+          <span className="text-xs text-amber-600">Rotation didn&apos;t save</span>
+        )}
+      </div>
+    </div>
   )
 }

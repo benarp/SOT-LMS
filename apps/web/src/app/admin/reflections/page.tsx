@@ -3,7 +3,8 @@ import { formatSubmittedAt } from '@/lib/dueDate'
 import { signedUploadUrls } from '@/lib/homeworkUploads'
 import { contactsForStudents } from '@/lib/studentContacts'
 import type { Reflection } from '@/components/admin/ReflectionDrawer'
-import ReflectionsFeed, { type WeekOption } from './ReflectionsFeed'
+import ReflectionsFeed, { type WeekOption, type GroupOption, type StudentOption } from './ReflectionsFeed'
+import { Suspense } from 'react'
 
 const IMAGE_FILE = /\.(jpe?g|png|heic|heif|webp|gif)$/i
 
@@ -24,7 +25,7 @@ export default async function ReflectionsPage() {
 
   const weekIds = (weeks || []).map(w => w.id)
 
-  const [{ data: items }, { data: students }] = await Promise.all([
+  const [{ data: items }, { data: students }, { data: groups }] = await Promise.all([
     supabase
       .from('homework_items')
       .select('id, week_id, title')
@@ -35,6 +36,11 @@ export default async function ReflectionsPage() {
       .select('id, full_name, email, group_id')
       .eq('role', 'student')
       .order('full_name', { ascending: true }),
+    supabase
+      .from('groups')
+      .select('id, name')
+      .eq('school_year_id', schoolYear?.id ?? '')
+      .order('name', { ascending: true }),
   ])
 
   const itemIds = (items || []).map(i => i.id)
@@ -42,7 +48,7 @@ export default async function ReflectionsPage() {
 
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('student_id, homework_item_id, is_late, completed_at, response_text, response_file_path, response_file_name')
+    .select('id, student_id, homework_item_id, is_late, completed_at, response_text, response_file_path, response_file_name, response_file_rotation')
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
     .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
 
@@ -59,7 +65,7 @@ export default async function ReflectionsPage() {
 
   // Unlike the week grid, this lists only work that was actually handed in, so
   // reading-plan visibility never comes into it.
-  const reflections: (Reflection & { weekId: string })[] = []
+  const reflections: (Reflection & { weekId: string; studentId: string; groupId: string | null })[] = []
   for (const submission of submissions || []) {
     if (!submission.response_text && !submission.response_file_path) continue
 
@@ -71,7 +77,10 @@ export default async function ReflectionsPage() {
     const contact = contacts.get(student.id)
     reflections.push({
       key: `${student.id}:${item.id}`,
+      submissionId: submission.id,
       weekId: week.id,
+      studentId: student.id,
+      groupId: student.group_id ?? null,
       studentName: student.full_name || student.email,
       groupName: contact?.groupName ?? null,
       phone: contact?.phone ?? null,
@@ -82,6 +91,7 @@ export default async function ReflectionsPage() {
       fileUrl: submission.response_file_path ? fileUrls.get(submission.response_file_path) ?? null : null,
       fileName: submission.response_file_name ?? null,
       isImage: submission.response_file_path ? IMAGE_FILE.test(submission.response_file_path) : false,
+      rotation: submission.response_file_rotation ?? 0,
       isLate: !!submission.is_late,
       completedAt: submission.completed_at ?? null,
       completedLabel: formatSubmittedAt(submission.completed_at),
@@ -94,6 +104,16 @@ export default async function ReflectionsPage() {
     label: `Week ${w.week_number} — ${w.title}`,
   }))
 
+  const groupOptions: GroupOption[] = (groups || []).map(g => ({ id: g.id, name: g.name }))
+
+  // Every student, not just the ones who have submitted: an empty result answers
+  // "did they hand anything in?" where a missing name would only raise the question.
+  const studentOptions: StudentOption[] = (students || []).map(s => ({
+    id: s.id,
+    name: s.full_name || s.email,
+    groupId: s.group_id ?? null,
+  }))
+
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
@@ -101,7 +121,14 @@ export default async function ReflectionsPage() {
         <p className="text-sm text-gray-400 mt-1">{schoolYear?.name} · newest first</p>
       </div>
 
-      <ReflectionsFeed reflections={reflections} weeks={weekOptions} />
+      <Suspense fallback={<p className="text-sm text-gray-400">Loading reflections…</p>}>
+        <ReflectionsFeed
+          reflections={reflections}
+          weeks={weekOptions}
+          groups={groupOptions}
+          students={studentOptions}
+        />
+      </Suspense>
     </div>
   )
 }
