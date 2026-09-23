@@ -25,6 +25,7 @@ export type Cell =
       fileUrl: string | null
       fileName: string | null
       isImage: boolean
+      rotation?: number
     }
 
 export type Row = {
@@ -136,6 +137,8 @@ export default function WeekReportView({ columns, rows, reflections }: Props) {
                           <img
                             src={cell.fileUrl}
                             alt=""
+                            // The thumbnail box is square, so a quarter turn needs no resizing.
+                            style={cell.rotation ? { transform: `rotate(${cell.rotation}deg)` } : undefined}
                             className="mt-1.5 w-10 h-10 rounded object-cover border border-gray-200"
                           />
                         )}

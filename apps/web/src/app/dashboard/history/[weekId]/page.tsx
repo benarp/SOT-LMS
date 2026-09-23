@@ -34,7 +34,7 @@ export default async function WeekDetailPage({ params }: { params: Promise<{ wee
   const itemIds = (items || []).map(i => i.id)
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('homework_item_id, completed_at, is_late, response_text, response_file_path, response_file_name')
+    .select('homework_item_id, completed_at, is_late, response_text, response_file_path, response_file_name, response_file_rotation')
     .eq('student_id', user.id)
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
 
@@ -53,6 +53,7 @@ export default async function WeekDetailPage({ params }: { params: Promise<{ wee
         path: submission.response_file_path,
         name: submission.response_file_name ?? 'upload',
         url: signed?.signedUrl ?? null,
+        rotation: submission.response_file_rotation ?? 0,
       }
     }
     return {

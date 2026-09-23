@@ -58,7 +58,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
 
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('student_id, homework_item_id, is_late, completed_at, response_text, response_file_path, response_file_name')
+    .select('id, student_id, homework_item_id, is_late, completed_at, response_text, response_file_path, response_file_name, response_file_rotation')
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
     .in('student_id', studentIds.length > 0 ? studentIds : ['none'])
 
@@ -93,6 +93,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
       if (!submission?.response_text && !submission?.response_file_path) continue
       reflections.push({
         key: `${student.id}:${item.id}`,
+        submissionId: submission.id,
         studentName: student.full_name || student.email,
         groupName: contact?.groupName ?? null,
         phone: contact?.phone ?? null,
@@ -103,6 +104,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
         fileUrl: submission.response_file_path ? fileUrls.get(submission.response_file_path) ?? null : null,
         fileName: submission.response_file_name ?? null,
         isImage: submission.response_file_path ? IMAGE_FILE.test(submission.response_file_path) : false,
+        rotation: submission.response_file_rotation ?? 0,
         isLate: !!submission.is_late,
         completedAt: submission.completed_at ?? null,
         completedLabel: formatSubmittedAt(submission.completed_at),
@@ -133,6 +135,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
             fileUrl: reflection.fileUrl,
             fileName: reflection.fileName,
             isImage: reflection.isImage,
+            rotation: reflection.rotation,
           }
         }
         const submission = submissionMap.get(`${student.id}:${item.id}`)

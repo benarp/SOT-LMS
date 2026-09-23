@@ -66,20 +66,20 @@ export default async function DashboardPage() {
   const itemIds = (items || []).map(i => i.id)
   const { data: submissions } = await supabase
     .from('submissions')
-    .select('homework_item_id, completed_at, is_late, response_text, response_file_path, response_file_name')
+    .select('homework_item_id, completed_at, is_late, response_text, response_file_path, response_file_name, response_file_rotation')
     .eq('student_id', user.id)
     .in('homework_item_id', itemIds.length > 0 ? itemIds : ['none'])
 
   const submittedIds = new Set((submissions || []).map(s => s.homework_item_id))
   const responseByItem: Record<string, string> = {}
-  const fileByItem: Record<string, { path: string; name: string; url: string | null }> = {}
+  const fileByItem: Record<string, { path: string; name: string; url: string | null; rotation: number }> = {}
   for (const s of submissions || []) {
     if (s.response_text) responseByItem[s.homework_item_id] = s.response_text
     if (s.response_file_path) {
       const { data: signed } = await supabase.storage
         .from('homework-uploads')
         .createSignedUrl(s.response_file_path, 3600)
-      fileByItem[s.homework_item_id] = { path: s.response_file_path, name: s.response_file_name ?? 'upload', url: signed?.signedUrl ?? null }
+      fileByItem[s.homework_item_id] = { path: s.response_file_path, name: s.response_file_name ?? 'upload', url: signed?.signedUrl ?? null, rotation: s.response_file_rotation ?? 0 }
     }
   }
 
