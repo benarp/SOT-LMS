@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import SignOutButton from '@/components/SignOutButton'
+import { ownRoleLabel } from '@/lib/roles'
 
 type NavItem = {
   href: string
@@ -64,7 +65,7 @@ export default function NavShell({ title, subtitle, navItems, userInitials, user
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
-              <p className="text-xs text-gray-400 truncate capitalize">{userRole.replace('_', ' ')}</p>
+              <p className="text-xs text-gray-400 truncate capitalize">{ownRoleLabel(userRole)}</p>
             </div>
           </div>
           <SignOutButton />
@@ -113,7 +114,7 @@ export default function NavShell({ title, subtitle, navItems, userInitials, user
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
-                  <p className="text-xs text-gray-400 truncate capitalize">{userRole.replace('_', ' ')}</p>
+                  <p className="text-xs text-gray-400 truncate capitalize">{ownRoleLabel(userRole)}</p>
                 </div>
               </div>
               <SignOutButton />

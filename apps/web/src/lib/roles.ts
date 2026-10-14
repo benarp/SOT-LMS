@@ -11,3 +11,10 @@ export function isStudentRole(role: string | null | undefined): boolean {
 export function isLeaderRole(role: string | null | undefined): boolean {
   return !!role && LEADER_ROLES.includes(role)
 }
+
+// How a role reads to the person who holds it. Player Coach is an admin
+// distinction — to the coach themselves, and anyone viewing as them, they're
+// a group leader.
+export function ownRoleLabel(role: string): string {
+  return role === 'player_coach' ? 'group leader' : role.replace('_', ' ')
+}
