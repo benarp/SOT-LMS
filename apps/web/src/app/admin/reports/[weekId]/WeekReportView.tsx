@@ -171,6 +171,7 @@ export default function WeekReportView({ columns, rows, reflections }: Props) {
           index={openIndex}
           onClose={closeDrawer}
           onNavigate={setOpenIndex}
+          canSaveRotation
         />
       )}
     </>

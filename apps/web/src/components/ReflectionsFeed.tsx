@@ -20,7 +20,7 @@ export type StudentOption = {
   groupId: string | null
 }
 
-type FeedReflection = Reflection & {
+export type FeedReflection = Reflection & {
   weekId: string
   studentId: string
   groupId: string | null
@@ -31,9 +31,10 @@ type Props = {
   weeks: WeekOption[]
   groups: GroupOption[]
   students: StudentOption[]
+  canSaveRotation: boolean
 }
 
-export default function ReflectionsFeed({ reflections, weeks, groups, students }: Props) {
+export default function ReflectionsFeed({ reflections, weeks, groups, students, canSaveRotation }: Props) {
   const searchParams = useSearchParams()
   const [openKey, setOpenKey] = useState<string | null>(null)
   const lastTrigger = useRef<HTMLElement | null>(null)
@@ -122,17 +123,20 @@ export default function ReflectionsFeed({ reflections, weeks, groups, students }
           ))}
         </select>
 
-        <select
-          value={groupId}
-          onChange={e => chooseGroup(e.target.value)}
-          aria-label="Filter by group"
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
-        >
-          <option value="all">All groups</option>
-          {groups.map(group => (
-            <option key={group.id} value={group.id}>{group.name}</option>
-          ))}
-        </select>
+        {/* A group leader's feed holds a single group, so there's nothing to pick. */}
+        {groups.length > 1 && (
+          <select
+            value={groupId}
+            onChange={e => chooseGroup(e.target.value)}
+            aria-label="Filter by group"
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
+          >
+            <option value="all">All groups</option>
+            {groups.map(group => (
+              <option key={group.id} value={group.id}>{group.name}</option>
+            ))}
+          </select>
+        )}
 
         <select
           value={studentId}
@@ -227,6 +231,7 @@ export default function ReflectionsFeed({ reflections, weeks, groups, students }
           index={openIndex}
           onClose={closeDrawer}
           onNavigate={i => setOpenKey(visible[i]?.key ?? null)}
+          canSaveRotation={canSaveRotation}
         />
       )}
     </>
