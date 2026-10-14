@@ -28,9 +28,11 @@ type Props = {
   index: number
   onClose: () => void
   onNavigate: (index: number) => void
+  /** Group leaders can turn a photo to read it, but only admins change how it's saved. */
+  canSaveRotation: boolean
 }
 
-export default function ReflectionDrawer({ reflections, index, onClose, onNavigate }: Props) {
+export default function ReflectionDrawer({ reflections, index, onClose, onNavigate, canSaveRotation }: Props) {
   const reflection = reflections[index]
   const closeRef = useRef<HTMLButtonElement | null>(null)
   const bodyRef = useRef<HTMLDivElement | null>(null)
@@ -124,6 +126,7 @@ export default function ReflectionDrawer({ reflections, index, onClose, onNaviga
               src={reflection.fileUrl}
               submissionId={reflection.submissionId}
               initialRotation={reflection.rotation}
+              canSave={canSaveRotation}
             />
           )}
 
@@ -167,10 +170,12 @@ function RotatableImage({
   src,
   submissionId,
   initialRotation,
+  canSave,
 }: {
   src: string
   submissionId: string
   initialRotation: number
+  canSave: boolean
 }) {
   const [rotation, setRotation] = useState(initialRotation)
   const [aspect, setAspect] = useState<number | null>(null)
@@ -183,6 +188,7 @@ function RotatableImage({
     const next = (rotation + degrees + 360) % 360
     setRotation(next)
     setFailed(false)
+    if (!canSave) return
     setReflectionRotation(submissionId, next)
       .then(res => setFailed(!!res?.error))
       .catch(() => setFailed(true))
