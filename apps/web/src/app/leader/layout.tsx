@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NavShell from '@/components/NavShell'
+import ImpersonationBanner from '@/components/ImpersonationBanner'
+import { getImpersonationState } from '@/app/actions/impersonate'
 
 export default async function LeaderLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -14,6 +16,9 @@ export default async function LeaderLayout({ children }: { children: React.React
     .single()
 
   if (profile?.role !== 'group_leader') redirect('/dashboard')
+
+  // An admin viewing as a leader lands here, so the way back has to be here too.
+  const impersonation = await getImpersonationState()
 
   const { data: group } = profile?.group_id
     ? await supabase.from('groups').select('name').eq('id', profile.group_id).single()
@@ -61,6 +66,9 @@ export default async function LeaderLayout({ children }: { children: React.React
       userName={profile?.full_name || ''}
       userRole="group_leader"
     >
+      {impersonation && (
+        <ImpersonationBanner studentName={impersonation.studentName || profile?.full_name || user.email || 'group leader'} />
+      )}
       <div className="p-4 md:p-8">
         {children}
       </div>
