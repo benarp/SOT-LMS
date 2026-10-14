@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import ExportCsvButton, { type FinanceRow } from './ExportCsvButton'
 import { BILLING_STATUS_LABELS, TOTAL_CYCLES, formatCents, outstandingCents } from '@/lib/billing'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600',
@@ -21,7 +22,7 @@ export default async function FinancesPage() {
     .from('school_years').select('id, name').eq('is_active', true).single()
 
   const [{ data: students }, { data: accounts }] = await Promise.all([
-    admin.from('profiles').select('id, full_name, email').eq('role', 'student').order('full_name'),
+    admin.from('profiles').select('id, full_name, email').in('role', STUDENT_ROLES).order('full_name'),
     schoolYear
       ? admin
           .from('billing_accounts')

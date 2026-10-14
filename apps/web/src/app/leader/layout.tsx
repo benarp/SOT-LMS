@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import NavShell from '@/components/NavShell'
 import ImpersonationBanner from '@/components/ImpersonationBanner'
 import { getImpersonationState } from '@/app/actions/impersonate'
+import { isLeaderRole } from '@/lib/roles'
 
 export default async function LeaderLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export default async function LeaderLayout({ children }: { children: React.React
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'group_leader') redirect('/dashboard')
+  if (!isLeaderRole(profile?.role)) redirect('/dashboard')
 
   // An admin viewing as a leader lands here, so the way back has to be here too.
   const impersonation = await getImpersonationState()
@@ -64,7 +65,7 @@ export default async function LeaderLayout({ children }: { children: React.React
       navItems={navItems}
       userInitials={(profile?.full_name || 'L').charAt(0).toUpperCase()}
       userName={profile?.full_name || ''}
-      userRole="group_leader"
+      userRole={profile?.role ?? 'group_leader'}
     >
       {impersonation && (
         <ImpersonationBanner studentName={impersonation.studentName || profile?.full_name || user.email || 'group leader'} />

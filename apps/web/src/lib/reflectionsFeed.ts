@@ -4,6 +4,7 @@ import { signedUploadUrls } from '@/lib/homeworkUploads'
 import { contactsForStudents, type StudentContact } from '@/lib/studentContacts'
 import type { Reflection } from '@/components/admin/ReflectionDrawer'
 import type { FeedReflection, WeekOption, GroupOption, StudentOption } from '@/components/ReflectionsFeed'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 const IMAGE_FILE = /\.(jpe?g|png|heic|heif|webp|gif)$/i
 
@@ -52,7 +53,7 @@ export async function loadReflectionsFeed({
   let studentsQuery = supabase
     .from('profiles')
     .select('id, full_name, email, group_id')
-    .eq('role', 'student')
+    .in('role', STUDENT_ROLES)
     .order('full_name', { ascending: true })
   let groupsQuery = supabase
     .from('groups')

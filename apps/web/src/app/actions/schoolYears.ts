@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAudit } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 async function assertAdmin() {
   const supabase = await createClient()
@@ -137,7 +138,7 @@ export async function previewCompleteSchoolYear(
   const { data: students } = await admin
     .from('profiles')
     .select('full_name, email')
-    .eq('role', 'student')
+    .in('role', STUDENT_ROLES)
     .in('id', Array.from(cohort))
     .order('full_name')
 
@@ -174,7 +175,7 @@ export async function completeSchoolYear(schoolYearId: string): Promise<{ error?
     const { data, error: gradError } = await admin
       .from('profiles')
       .update({ role: 'alumni', alumni_year_id: schoolYearId, group_id: null })
-      .eq('role', 'student')
+      .in('role', STUDENT_ROLES)
       .in('id', Array.from(cohort))
       .select('id')
     if (gradError) return { error: gradError.message }

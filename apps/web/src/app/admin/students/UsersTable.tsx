@@ -25,6 +25,7 @@ const roleLabels: Record<string, string> = {
   admin: 'Admin',
   student: 'Student',
   group_leader: 'Group Leader',
+  player_coach: 'Player Coach',
   applicant: 'Applicant',
   alumni: 'Alumni',
 }
@@ -32,9 +33,10 @@ const roleLabels: Record<string, string> = {
 const roleOrder: Record<string, number> = {
   admin: 0,
   group_leader: 1,
-  student: 2,
-  applicant: 3,
-  alumni: 4,
+  player_coach: 2,
+  student: 3,
+  applicant: 4,
+  alumni: 5,
 }
 
 function sortValue(row: UserRow, key: SortKey): string | number {
@@ -190,6 +192,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
     const colors: Record<string, string> = {
       admin: 'bg-purple-50 text-purple-700',
       group_leader: 'bg-blue-50 text-blue-700',
+      player_coach: 'bg-sky-50 text-sky-700',
       student: 'bg-gray-100 text-gray-700',
       applicant: 'bg-orange-50 text-orange-700',
       alumni: 'bg-emerald-50 text-emerald-700',
@@ -223,6 +226,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
           <option value="all">All roles</option>
           <option value="admin">Admin</option>
           <option value="group_leader">Group Leader</option>
+          <option value="player_coach">Player Coach</option>
           <option value="student">Student</option>
           <option value="applicant">Applicant</option>
           <option value="alumni">Alumni</option>

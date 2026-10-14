@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 export default async function AdminOverviewPage() {
   const supabase = await createClient()
@@ -11,7 +12,7 @@ export default async function AdminOverviewPage() {
     .single()
 
   const [{ count: studentCount }, { count: weekCount }, { data: recentSubmissions }] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', STUDENT_ROLES),
     supabase.from('weeks').select('*', { count: 'exact', head: true }).eq('school_year_id', schoolYear?.id || ''),
     supabase.from('submissions').select('completed_at').order('completed_at', { ascending: false }).limit(1),
   ])

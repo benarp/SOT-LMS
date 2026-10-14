@@ -5,6 +5,7 @@ import { getImpersonationState } from '@/app/actions/impersonate'
 import NavShell from '@/components/NavShell'
 import Link from 'next/link'
 import { BILLING_VISIBLE_TO_STUDENTS } from '@/lib/billing'
+import { isLeaderRole } from '@/lib/roles'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -22,7 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Group leaders reach This week and Curriculum so they can see the work
   // their students were assigned. They still land on /leader when they sign
   // in (see proxy.ts); the group links below keep that a click away.
-  const isGroupLeader = profile?.role === 'group_leader'
+  const isGroupLeader = isLeaderRole(profile?.role)
 
   const initials = (profile?.full_name || user.email || 'U')
     .split(' ')

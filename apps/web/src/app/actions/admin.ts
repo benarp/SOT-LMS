@@ -306,7 +306,7 @@ export async function updateStudentGroup(studentId: string, groupId: string | nu
 
 // ── User management ─────────────────────────────────────────
 
-const VALID_ROLES = ['admin', 'group_leader', 'student', 'applicant', 'alumni']
+const VALID_ROLES = ['admin', 'group_leader', 'player_coach', 'student', 'applicant', 'alumni']
 
 async function guard(): Promise<{ ctx?: Awaited<ReturnType<typeof requireAdmin>>; error?: string }> {
   try {

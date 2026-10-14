@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 export default async function LeaderStudentsPage() {
   const supabase = await createClient()
@@ -26,7 +27,7 @@ export default async function LeaderStudentsPage() {
     .from('profiles')
     .select('id, full_name, email, bible_plan')
     .eq('group_id', profile.group_id)
-    .eq('role', 'student')
+    .in('role', STUDENT_ROLES)
     .order('full_name')
 
   const { data: weeks } = await supabase

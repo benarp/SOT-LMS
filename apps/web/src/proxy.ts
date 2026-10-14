@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { BILLING_VISIBLE_TO_STUDENTS } from '@/lib/billing'
+import { isStudentRole, isLeaderRole } from '@/lib/roles'
 
 // Pre-launch gate: students/group leaders can only set their password and see
 // the "coming soon" page until the portal is actually ready. Flipped false at
@@ -83,7 +84,7 @@ export async function proxy(request: NextRequest) {
     }
 
     // Pre-launch gate — admins keep full access to finish setup
-    if (COMING_SOON && (role === 'student' || role === 'group_leader')) {
+    if (COMING_SOON && (isStudentRole(role) || isLeaderRole(role))) {
       const allowed = pathname === '/coming-soon' || pathname === '/reset-password'
       if (!allowed) {
         return NextResponse.redirect(new URL('/coming-soon', request.url))
@@ -92,7 +93,8 @@ export async function proxy(request: NextRequest) {
     }
 
     // Where signing in drops you. Group leaders start on their group overview
-    // even though they can reach the student views from the nav.
+    // even though they can reach the student views from the nav. Player coaches
+    // have homework of their own, so they start on This week like students.
     const home = role === 'group_leader' ? '/leader' : '/dashboard'
 
     // Redirect authenticated non-applicants away from login

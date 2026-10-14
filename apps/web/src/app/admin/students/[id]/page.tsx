@@ -11,6 +11,7 @@ import BillingPanel from './BillingPanel'
 import { outstandingCents } from '@/lib/billing'
 import { BIBLE_PLAN_LABELS, asBiblePlan, frozenMap, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 import { formatDueDate, isPastDue } from '@/lib/dueDate'
+import { isStudentRole } from '@/lib/roles'
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -111,7 +112,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </span>
           )}
         </div>
-        {profile.role === 'student' && !isDeactivated && (
+        {isStudentRole(profile.role) && !isDeactivated && (
           <ImpersonateButton email={profile.email} name={profile.full_name || profile.email} />
         )}
       </div>
@@ -163,7 +164,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             />
           </section>
 
-          {profile.role === 'student' && (
+          {isStudentRole(profile.role) && (
             <section>
               <h2 className="text-sm font-medium text-gray-700 mb-3">
                 Billing — {schoolYear?.name ?? 'no active year'}
