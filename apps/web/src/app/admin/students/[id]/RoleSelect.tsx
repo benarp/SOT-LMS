@@ -6,6 +6,7 @@ import { updateUserRole } from '@/app/actions/admin'
 const roleLabels: Record<string, string> = {
   admin: 'Admin',
   group_leader: 'Group Leader',
+  player_coach: 'Player Coach',
   student: 'Student',
   applicant: 'Applicant',
   alumni: 'Alumni',

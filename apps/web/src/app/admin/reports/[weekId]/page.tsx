@@ -6,6 +6,7 @@ import { formatDueDate, formatSubmittedAt } from '@/lib/dueDate'
 import { signedUploadUrls } from '@/lib/homeworkUploads'
 import { contactsForStudents } from '@/lib/studentContacts'
 import WeekReportView, { type Column, type Reflection, type Row } from './WeekReportView'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 const typeLabels: Record<string, string> = {
   bible_reading: 'Scripture Reading',
@@ -37,7 +38,7 @@ export default async function WeekReportPage({ params }: { params: Promise<{ wee
     supabase
       .from('profiles')
       .select('id, full_name, email, group_id, bible_plan')
-      .eq('role', 'student')
+      .in('role', STUDENT_ROLES)
       .order('full_name', { ascending: true }),
   ])
 

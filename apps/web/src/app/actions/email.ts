@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
 import { asBiblePlan, itemVisibleToPlan } from '@/lib/biblePlan'
 import { formatDueDate } from '@/lib/dueDate'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 function escapeHtml(value: string): string {
   return value
@@ -166,7 +167,7 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
     supabase
       .from('profiles')
       .select('email, full_name, email_opt_out, unsubscribe_token, bible_plan')
-      .eq('role', 'student')
+      .in('role', STUDENT_ROLES)
       .eq('email_opt_out', false),
   ])
 
@@ -175,7 +176,7 @@ export async function sendWeeklyEmail(): Promise<{ sent: number; weekTitle?: str
     | { email: string | null; full_name: string | null; unsubscribe_token?: string; bible_plan?: string | null }[]
     | null = studentsResult.data
   if (studentsResult.error) {
-    const fallback = await supabase.from('profiles').select('email, full_name').eq('role', 'student')
+    const fallback = await supabase.from('profiles').select('email, full_name').in('role', STUDENT_ROLES)
     students = fallback.data
   }
 

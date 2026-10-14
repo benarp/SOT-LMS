@@ -7,6 +7,7 @@ import UsersTable, { type UserRow } from './UsersTable'
 import { BILLING_STATUS_LABELS } from '@/lib/billing'
 import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 import { isPastDue } from '@/lib/dueDate'
+import { isStudentRole } from '@/lib/roles'
 
 function splitName(full: string | null): { firstName: string; lastName: string } {
   if (!full) return { firstName: '', lastName: '' }
@@ -83,7 +84,7 @@ export default async function UsersPage() {
     const itemIds = (items ?? []).map(i => i.id)
 
     if (itemIds.length > 0) {
-      const studentIds = (profiles ?? []).filter(p => p.role === 'student').map(p => p.id)
+      const studentIds = (profiles ?? []).filter(p => isStudentRole(p.role)).map(p => p.id)
       const [{ data: submissions }, { data: frozenRows }] = await Promise.all([
         supabase.from('submissions').select('student_id, homework_item_id').in('homework_item_id', itemIds),
         supabase
@@ -99,7 +100,7 @@ export default async function UsersPage() {
       // "Current" means done with everything on *their* reading plan, so the
       // denominator differs per student.
       for (const profile of profiles ?? []) {
-        if (profile.role !== 'student') continue
+        if (!isStudentRole(profile.role)) continue
         const plan = planForWeek(currentWeek.id, asBiblePlan(profile.bible_plan), frozenByStudent.get(profile.id))
         const visible = (items ?? []).filter(i => itemVisibleToPlan(i, plan))
         if (visible.length === 0) continue
@@ -132,12 +133,12 @@ export default async function UsersPage() {
       role: p.role,
       alumniYear: p.alumni_year_id ? yearNameById.get(p.alumni_year_id) ?? null : null,
       birthday: p.birthday ?? null,
-      paymentStatus: p.role === 'student' ? (billingStatusByStudent.get(p.id) ?? 'Not started') : null,
+      paymentStatus: isStudentRole(p.role) ? (billingStatusByStudent.get(p.id) ?? 'Not started') : null,
       homeworkStatus: homeworkStatusMap[p.id] ?? null,
     }
   })
 
-  const students = (profiles ?? []).filter(p => p.role === 'student')
+  const students = (profiles ?? []).filter(p => isStudentRole(p.role))
 
   return (
     <div>

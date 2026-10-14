@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { asBiblePlan, frozenMapByStudent, itemVisibleToPlan, planForWeek } from '@/lib/biblePlan'
 import { formatDueDate, isPastDue } from '@/lib/dueDate'
+import { STUDENT_ROLES } from '@/lib/roles'
 
 export default async function ReportsPage() {
   const supabase = await createClient()
@@ -13,7 +14,7 @@ export default async function ReportsPage() {
     .single()
 
   const [{ data: students }, { data: weeks }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, email, group_id, bible_plan').eq('role', 'student').order('full_name'),
+    supabase.from('profiles').select('id, full_name, email, group_id, bible_plan').in('role', STUDENT_ROLES).order('full_name'),
     supabase.from('weeks').select('id, week_number, title, due_date').eq('school_year_id', schoolYear?.id || '').order('week_number', { ascending: false }),
   ])
 
