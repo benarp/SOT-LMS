@@ -127,6 +127,32 @@ export async function deleteHomeworkItem(itemId: string, weekId: string): Promis
   return {}
 }
 
+export async function reorderHomeworkItems(weekId: string, orderedIds: string[]): Promise<{ error?: string }> {
+  const { ctx, error: authError } = await guard()
+  if (!ctx) return { error: authError }
+  const supabase = await createClient()
+
+  // Only renumber items that belong to this week — ignore any stray ids
+  const { data: existing } = await supabase
+    .from('homework_items')
+    .select('id')
+    .eq('week_id', weekId)
+  const valid = new Set((existing ?? []).map(i => i.id))
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    if (!valid.has(orderedIds[i])) continue
+    const { error } = await supabase
+      .from('homework_items')
+      .update({ sort_order: i + 1 })
+      .eq('id', orderedIds[i])
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath(`/admin/curriculum/${weekId}`)
+  revalidatePath('/dashboard')
+  return {}
+}
+
 // ── Recordings ──────────────────────────────────────────────
 
 export async function saveRecording(formData: FormData): Promise<{ error?: string }> {

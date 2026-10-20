@@ -2,17 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import AddHomeworkItemForm from '@/components/admin/AddHomeworkItemForm'
-import DeleteItemButton from '@/components/admin/DeleteItemButton'
-import EditItemButton from '@/components/admin/EditItemButton'
-import { BIBLE_PLAN_LABELS, asBiblePlan } from '@/lib/biblePlan'
+import HomeworkItemList from '@/components/admin/HomeworkItemList'
 import { formatDueDate } from '@/lib/dueDate'
-
-const typeLabels: Record<string, string> = {
-  bible_reading: 'Scripture Reading',
-  book_reading: 'Book Reading',
-  video: 'Video',
-  reflection: 'Reflection',
-}
 
 export default async function WeekEditPage({ params }: { params: Promise<{ weekId: string }> }) {
   const { weekId } = await params
@@ -51,39 +42,7 @@ export default async function WeekEditPage({ params }: { params: Promise<{ weekI
       {/* Homework items */}
       <div className="mb-6">
         <h2 className="text-sm font-medium text-gray-700 mb-3">Homework items</h2>
-        <div className="space-y-2">
-          {(items || []).map(item => (
-            <div key={item.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3.5">
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400">
-                    {typeLabels[item.type]}
-                    {item.bible_plan && (
-                      <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
-                        {BIBLE_PLAN_LABELS[asBiblePlan(item.bible_plan)]} only
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">{item.title}</p>
-                  {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
-                  {item.external_url && (
-                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 mt-0.5 block truncate">{item.external_url}</a>
-                  )}
-                  {item.content && (
-                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-2 font-mono">{item.content}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-0.5 flex-shrink-0">
-                  <EditItemButton item={item} />
-                  <DeleteItemButton itemId={item.id} />
-                </div>
-              </div>
-            </div>
-          ))}
-          {(items || []).length === 0 && (
-            <p className="text-sm text-gray-400 py-2">No items yet.</p>
-          )}
-        </div>
+        <HomeworkItemList items={items || []} weekId={weekId} />
       </div>
 
       <AddHomeworkItemForm weekId={weekId} nextSortOrder={(items || []).length + 1} />
