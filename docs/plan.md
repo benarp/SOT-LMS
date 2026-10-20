@@ -91,6 +91,7 @@ Full product spec: [`docs/PRD.md`](./PRD.md)
 - Set application open/close dates per school year
 - Add weeks (numbered, titled, due date)
 - Per-week: add/edit/delete homework items of any type
+- Per-week: drag homework items (by the ⠿ grip) into a new order — the order students, reports, and the weekly email see
 
 ### Admin — Recordings
 - `/admin/recordings` lists every week of the active year with its recording state
